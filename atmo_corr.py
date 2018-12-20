@@ -39,10 +39,10 @@ def adjacency_correction(Lobs,L0,Ifup0,Ifdn,Ifup,transmittance,spherical_albedo,
 
 def mu_correction():
     # Mu Correction
-    tarp48_ret_noadj_mu(j,:) = pi .* (Rob - rad0) ./ (sph_alb_1km .* pi .*(Rob - rad0) + Ifdn_obs_trim .* (t_1km.^2 + (1 + mu) * t_1km .* sqrt(Tso_1km) + mu.*Tso_1km));
+    tarp48_ret_noadj_mu(j,:) = pi .* (Rob - rad0) ./ (sph_alb_1km .* pi .*(Rob - rad0) + Ifdn_obs_trim .* (t_1km.^2 + (1 + mu) * t_1km .* sqrt(Tso_1km) + mu.*Tso_1km))
 
-    rho_bar_ret_mu = (Ifup_obs_trim - Ifup0) ./ ((Ifdn_obs_trim .*(t_1km.^2 + (1 + mu) * t_1km .* sqrt(Tso_1km) + mu.*Tso_1km) + (Ifup_obs_trim - Ifup0) .* sph_alb_1km));
-    R = (Rob - rad0 - (Ifdn_obs_trim .* (t_1km + sqrt(Tso_1km)) .* t_1km) ./ pi .* (rho_bar_ret_mu ./ (1 - rho_bar_ret_mu .* sph_alb_1km))) .* (pi ./ (Ifdn_obs_trim .* (t_1km + sqrt(Tso_1km)) .* mu .* sqrt(Tso_1km))) .* (1 - rho_bar_ret_mu .* sph_alb_1km);
+    rho_bar_ret_mu = (Ifup_obs_trim - Ifup0) ./ ((Ifdn_obs_trim .*(t_1km.^2 + (1 + mu) * t_1km .* sqrt(Tso_1km) + mu.*Tso_1km) + (Ifup_obs_trim - Ifup0) .* sph_alb_1km))
+    R = (Rob - rad0 - (Ifdn_obs_trim .* (t_1km + sqrt(Tso_1km)) .* t_1km) ./ pi .* (rho_bar_ret_mu ./ (1 - rho_bar_ret_mu .* sph_alb_1km))) .* (pi ./ (Ifdn_obs_trim .* (t_1km + sqrt(Tso_1km)) .* mu .* sqrt(Tso_1km))) .* (1 - rho_bar_ret_mu .* sph_alb_1km)
 
 def load_ASD(filepath):
 
@@ -51,24 +51,24 @@ def load_ASD(filepath):
 def atmcorr(wvl,radiance,model,irrad_up = None,irrad_down = None):
     n = np.size(radiance)
     # Observation Retrieval
-    [~,ssirtime_ind] = np.min(np.abs(ssirtime-obs_time[j]));
+    [~,ssirtime_ind] = np.min(np.abs(ssirtime-obs_time[j]))
 
-    Ifdn_obs_trim = super_resample(zspect(ssirtime_ind,:)',zwvl,neon_wvl,neon_fwhm);
-    Ifup_obs_trim = super_resample(nspect(ssirtime_ind,:)',nwvl,neon_wvl,neon_fwhm);
+    Ifdn_obs_trim = super_resample(zspect(ssirtime_ind,:)',zwvl,neon_wvl,neon_fwhm)
+    Ifup_obs_trim = super_resample(nspect(ssirtime_ind,:)',nwvl,neon_wvl,neon_fwhm)
 
-    Ifup0 = super_resample(rho_a_I,flx_wvl,neon_wvl,neon_fwhm).*Ifdn_obs_trim;
-    rad0 = super_resample(rho_a_R,flx_wvl,neon_wvl,neon_fwhm).*Ifdn_obs_trim;
+    Ifup0 = super_resample(rho_a_I,flx_wvl,neon_wvl,neon_fwhm).*Ifdn_obs_trim
+    rad0 = super_resample(rho_a_R,flx_wvl,neon_wvl,neon_fwhm).*Ifdn_obs_trim
 
     tarp3_ret_noadj(j,:) = pi .* (Rob - rad0) ./ (sph_alb_1km .* pi .* ...
-            (Rob - rad0) + Ifdn_obs_trim .* (t_1km.^2 + 2 * t_1km .* sqrt(Tso_1km) + Tso_1km));
+            (Rob - rad0) + Ifdn_obs_trim .* (t_1km.^2 + 2 * t_1km .* sqrt(Tso_1km) + Tso_1km))
 
     rho_bar_ret = (Ifup_obs_trim - Ifup0) ./ ((Ifdn_obs_trim .* ...
-            ((t_1km + sqrt(Tso_1km)).^2) + (Ifup_obs_trim - Ifup0) .* sph_alb_1km));
+            ((t_1km + sqrt(Tso_1km)).^2) + (Ifup_obs_trim - Ifup0) .* sph_alb_1km))
     tarp3_ret(j,:) = (Rob - rad0 - (Ifdn_obs_trim .* (t_1km + sqrt(Tso_1km)) .* t_1km) ./ ...
             pi .* (rho_bar_ret ./ (1 - rho_bar_ret .* sph_alb_1km))) .* ...
-            (pi ./ (Ifdn_obs_trim .* (t_1km + sqrt(Tso_1km)) .* sqrt(Tso_1km))) .* (1 - rho_bar_ret .* sph_alb_1km);
+            (pi ./ (Ifdn_obs_trim .* (t_1km + sqrt(Tso_1km)) .* sqrt(Tso_1km))) .* (1 - rho_bar_ret .* sph_alb_1km)
 
-    flight_alb(j,:) = Rob*pi./Ifdn_obs_trim;
+    flight_alb(j,:) = Rob*pi./Ifdn_obs_trim
 
     plt.figure;hold on
     # plot(neon_wvl,tarp3_ret_TOA,'Color',light_standard)
@@ -103,7 +103,36 @@ def atmcorr(wvl,radiance,model,irrad_up = None,irrad_down = None):
         sqrt(sum(((mean(tarp3_ret_TOA_B(:,wv_bands),1)-tarp03_r(wv_bands))*100).^2)./numel(tarp03_r(wv_bands)))];
     plt.title('Tarp 3#')
 
+def sampling_issue(I0_orig,SunEllipticFactor,zwvl,ssim_zfwhm,neon_wvl,neon_fwhm,t_Ts,t_ts):
+    # Demonstrate Sampling Issue
+    I0_ssim = SunEllipticFactor.*super_resample(I0_orig(:,2),I0_orig(:,1),zwvl,ssim_zfwhm)
+    Ig_ssim = I0_ssim.*super_resample(t_Ts+t_ts,wvl,zwvl,ssim_zfwhm)
+    Ig_NIS = I0.*super_resample(t_Ts+t_ts,wvl,neon_wvl,neon_fwhm)
+    Ig_ssim_resampled = super_resample(I0_ssim(17:end).*super_resample(t_Ts+t_ts,wvl,zwvl(17:end),ssim_zfwhm(17:end)),zwvl(17:end),neon_wvl,neon_fwhm);
+    plt.figure
+    # plot(I0_orig(:,1),I0_orig(:,2),'k')
+    plt.plot(neon_wvl,Ig_NIS,'Color',[0,0,0])
+    plt.plot(zwvl,Ig_ssim,'Color',[33,102,172]./255)
+    plt.plot(neon_wvl,Ig_ssim_resampled,'Color',[178,24,43]./255)
 
+    plt.legend('NIS Sampling','SSIM Sampling','SSIM Resampled to NIS')
+    plt.ylabel('Spectral Irradiance [W m^{-2} nm^{-1}]')
+    plt.xlabel('Wavelength [nm]')
+    plt.title('Modelled Downwelling Irradiance')
+    plt.set(gca,'FontSize',18)
+    plt.axis([720,800,0.7,1.3]);grid on;box on
+    plt.savefig('IrradianceDiffRespFunc_O2.svg','svg')
+    plt.axis([350,1025,0,1.8]);
+    plt.savefig('IrradianceDiffRespFunc_Full.svg','svg')
+
+    plt.figure;
+    plt.plot(neon_wvl,Ig_NIS-Ig_ssim_resampled,'k')
+    plt.ylabel('Spectral Irradiance [W m^{-2} nm^{-1}]');
+    plt.xlabel('Wavelength [nm]')
+    plt.title('Difference Between NIS and SSIM Sampling')
+    plt.axis([720,800,-0.15,0.1]);grid on;box on
+    plt.set(gca,'FontSize',18)
+    plt.savefig('DiffRespFunc_O2.svg','svg')
 
 
 if __name__ == '__main__':
@@ -163,43 +192,48 @@ if __name__ == '__main__':
 
     conv = 10000;   # Scale Factor to convert [W cm^-2 nm^-1] to [W m^-2 nm^-2], used for .flx MODTRAN output file
 
-    # Load NEON Instrument Response Function
-    # respfunc = np.genfromtxt('/Users/wrightad/Documents/Data/NEON/nis2013_fmed2_2013.dat');
-    # neon_wvl0 = respfunc[:,2]+1.28;
-    # neon_fwhm0 = respfunc[:,3];
+    # Load NIS Data
+    nis_datacube = load_nis.load_nis(NISfile)
+    metadata = load_NIS(NISfile+'_obs_ort')
+    nistime = nis_datacube.nav['gps_time']
+
+    # Modify NEON Instrument Response Function
+    respfunc = nis_datacube['resp_func']
+    neon_wvl0 = respfunc[:,2]+1.28
+    neon_fwhm0 = respfunc[:,3]
 
     # Set Wavelength Ranges
     # SSIR Index (25) to Neon Wvl (364) - Zenith
     # SSIR Index (25) to NEON Wvl (152) - Nadir
-    neon_wvl_zen = neon_wvl0[1:364];neon_fwhm_zen = neon_fwhm0[1:364];
-    neon_wvl_nad = neon_wvl0[1:152];neon_fwhm_nad = neon_fwhm0[1:152];
+    neon_wvl_zen = neon_wvl0[0:364];neon_fwhm_zen = neon_fwhm0[0:364];
+    neon_wvl_nad = neon_wvl0[0:152];neon_fwhm_nad = neon_fwhm0[0:152];
     # neon_wvl_nad = neon_wvl0(1:125);neon_fwhm_nad = neon_fwhm0(1:125); # This
     # Truncates at 1000 nm (near Si/InGaAs joining)
-    neon_wvl = neon_wvl_nad;
-    neon_fwhm = neon_fwhm_nad;
-    L = len(neon_wvl0);
+    neon_wvl = neon_wvl_nad
+    neon_fwhm = neon_fwhm_nad
+    L = len(neon_wvl0)
 
     # Load MODTRAN Irradiance
-    data = np.genfromtxt('/Users/wrightad/Documents/Modtran/DATA/SUN01med2irradwnNormt.dat',' ',2);
-    data = data.data(2:end,:);
+    data = np.genfromtxt('/Users/wrightad/Documents/Modtran/DATA/SUN01med2irradwnNormt.dat',dtype = float, skip_header = 2)
+    data = data[1:,:]
     #     Convert to wavelength increments
-    I0[:,1] = 1e7./data[:,1]
-    I0[:,2] = data[:,2].*(1./I0[:,1].^2).*1e11
-    I0 = I0[I0[]:,1]<3000,:]
+    I0[:,0] = 1e7./data[:,0]
+    I0[:,1] = data[:,1]*(1/I0[:,0]**2)*1e11
+    I0 = I0[I0[:,0]<3000,:]
 
     I0_orig = I0
 
     #     Convolve to NEON Wavelength
-    I0 = SunEllipticFactor.*super_resample(I0[:,2],I0[:,1],neon_wvl,neon_fwhm)
+    I0 = SunEllipticFactor.*super_resample(I0[:,1],I0[:,0],neon_wvl,neon_fwhm)
 
 
 
     # Load in MODTRAN Output
-    [t_freq, t_ts, t_Tso, t_t, t_T, t_sph_alb] = load_acd(filename[0]+'.acd')
+    baseline_acd = load_acd(filename[0]+'.acd')
+
     t_Ts = t_Tso./t_T
     t_Ts(np.isnan(t_Ts)) = 0
     t_Ts(np.isinf(t_Ts)) = 0
-    wvl = 1e7./(t_freq)
     T = super_resample(t_T,wvl,neon_wvl,neon_fwhm)
     t = super_resample(t_t,wvl,neon_wvl,neon_fwhm)
     Ts = super_resample(t_Ts,wvl,neon_wvl,neon_fwhm)
@@ -208,20 +242,22 @@ if __name__ == '__main__':
     sph_alb = super_resample(t_sph_alb,wvl,neon_wvl,neon_fwhm)
 
     # Load MODTRAN Irradiance
-    flx_data = np.genfromtxt(filename[0]+'.flx'))
-    flx_wvl = flx_data.data[:,1]
+    baseline_flx = modtran_tools.load_flx(filename[0]+'.flx')
+
     # flx_fup = conv.*super_resample(flx_data.data(:,8),flx_data.data(:,1),neon_wvl,neon_fwhm)
-    flx_fdn = flx_data.data[:,33]+flx_data.data[:,34]
-    flx_fup = flx_data.data[:,32]
+    # flx_fdn = flx_data.data[:,33]+flx_data.data[:,34]
+    # flx_fup = flx_data.data[:,32]
 
     # Load MODTRAN Radiance
-    data_7sc = np.genfromtxt(filename[0]+'.7sc',' ',11)
-    wvl_7sc = data_7sc.data[0:-1,0]
-    r0 = data_7sc.data[:,9]
-    Iup = data_7sc.data[:,10]
+    baseline_7sc = modtran_tools.load_7sc(filename[0]+'.7sc')
+    wvl_7sc = baseline_7sc['wvl']
+    r0 = baseline_7sc['path_radiance']
+    Iup = baseline_7sc['path_irradiance']
 
-    r0 = r0[0:-1,:]./100
-    Iup = Iup[0:-1,:]
+    r0 = r0/100
+
+    # r0 = r0[0:,:]./100
+    # Iup = Iup[0,:]
 
     # Calculate Atmospheric Reflectance
     rho_a_I = flx_fup./flx_fdn
@@ -230,7 +266,7 @@ if __name__ == '__main__':
     rad0 = super_resample(r0,wvl_7sc,neon_wvl,neon_fwhm)
     Iup0_neon = super_resample(Iup,wvl_7sc,neon_wvl,neon_fwhm)
 
-    [~, t_ts_1km, t_Tso_1km, t_t_1km, t_T_1km, t_sph_alb_1km] = load_acd(strcat(filename{2},'.acd'))
+    flight_acd = modtran_tools.load_acd(filename[1] + '.acd')
     t_Ts_1km = t_Tso_1km./t_T_1km
     t_Ts_1km[np.isnan(t_Ts_1km)] = 0
     t_Ts_1km[np.isinf(t_Ts_1km)] = 0
@@ -241,7 +277,7 @@ if __name__ == '__main__':
     Tso_1km = super_resample(t_Tso_1km,wvl,neon_wvl,neon_fwhm)
     sph_alb_1km = super_resample(t_sph_alb_1km,wvl,neon_wvl,neon_fwhm)
 
-    flx_data_1km = importdata(filename[1]+'.flx')
+    flight_flx = modtran_tools.load_flx(filename[1]+'.flx')
     t_T_derived_1km = flx_data_1km.data[:,4]./flx_data_1km.data[:,34]
     t_Ts_derived_1km = flx_data_1km.data[:,4]./flx_data_1km.data[:,-1]
     t_T_derived = flx_data.data[:,4]./flx_data.data[:,34]
@@ -252,11 +288,7 @@ if __name__ == '__main__':
     T_derived = super_resample(flx_data.data[:,4]./flx_data.data[:,34],flx_data.data[:,1],neon_wvl,neon_fwhm)
     Ts_derived = super_resample(flx_data.data[:,4]./flx_data.data[:,end],flx_data.data[:,1],neon_wvl,neon_fwhm)
 
-    # Load NIS Data
-    data = Load_NIS(NISfile)
-    data = data./100   # Divide by 100 to convert to W/sr/m^2/nm
-    metadata = Load_NIS(NISfile+'_obs_ort')
-    nistime = metadata[:,:,10]
+    flight_7sc = modtran_tools.load_7sc
 
     # Load SSIR Data
     sio.loadmat(SSIRfile)
@@ -264,60 +296,30 @@ if __name__ == '__main__':
     nwvl = nwvl
 
     ssim_zwvl = zwvl
-    ssim_zfwhm0 = [365.25, 7.67;
-                   404.84, 8.11;
-                   435.83, 7.25;
-                   546.07, 7.88;
-                   912.30, 10.86;
-                   965.78, 15.97;
-                   1244.30, 12.70;
-                   1694.06, 9.75;
-                   1791.46, 10.79;
-                   2061.62, 17.58];
-    ssim_zfwhm = np.zeros(439,1);
-    ssim_zfwhm(1:192) = np.interp(ssim_zfwhm0(1:5,1),ssim_zfwhm0(1:5,2),ssim_zwvl(1:192),'linear','extrap');
-    ssim_zfwhm(193:end) = np.interp(ssim_zfwhm0(6:end,1),ssim_zfwhm0(6:end,2),ssim_zwvl(193:end),'linear','extrap');
-    ssim_nwvl = nwvl;
-    ssim_nfwhm0 = [365.25, 7.50;
-                   404.84, 7.85;
-                   435.83, 7.28;
-                   546.07, 8.16;
-                   912.30, 10.75];
-    ssim_nfwhm = interp1(ssim_nfwhm0(:,1),ssim_nfwhm0(:,2),ssim_nwvl,'linear','extrap');
+    ssim_zfwhm0 = np.array((365.25, 7.67),
+                   (404.84, 8.11),
+                   (435.83, 7.25),
+                   (546.07, 7.88),
+                   (912.30, 10.86),
+                   (965.78, 15.97),
+                   (1244.30, 12.70),
+                   (1694.06, 9.75),
+                   (1791.46, 10.79),
+                   (2061.62, 17.58))
+    ssim_zfwhm = np.zeros((439,1))
+    ssim_zfwhm[0:192] = np.interp(ssim_zfwhm0(0:5,0),ssim_zfwhm0(0:5,1),ssim_zwvl(0:192),'linear','extrap')
+    ssim_zfwhm[193:end] = np.interp(ssim_zfwhm0(5:,0),ssim_zfwhm0(5:,1),ssim_zwvl(193:),'linear','extrap')
+    ssim_nwvl = nwvl
+    ssim_nfwhm0 = np.array((365.25, 7.50),
+                   (404.84, 7.85),
+                   (435.83, 7.28),
+                   (546.07, 8.16),
+                   (912.30, 10.75))
+    ssim_nfwhm = np.interp(ssim_nfwhm0(:,1),ssim_nfwhm0(:,2),ssim_nwvl,'linear','extrap')
 
-    ssim_wvl = ssim_zwvl(26:225);
-
-    # Demonstrate Sampling Issue
-    I0_ssim = SunEllipticFactor.*super_resample(I0_orig(:,2),I0_orig(:,1),zwvl,ssim_zfwhm);
-    Ig_ssim = I0_ssim.*super_resample(t_Ts+t_ts,wvl,zwvl,ssim_zfwhm);
-    Ig_NIS = I0.*super_resample(t_Ts+t_ts,wvl,neon_wvl,neon_fwhm);
-    Ig_ssim_resampled = super_resample(I0_ssim(17:end).*super_resample(t_Ts+t_ts,wvl,zwvl(17:end),ssim_zfwhm(17:end)),zwvl(17:end),neon_wvl,neon_fwhm);
-    plt.figure;
-    # plot(I0_orig(:,1),I0_orig(:,2),'k')
-    plt.plot(neon_wvl,Ig_NIS,'Color',[0,0,0])
-    plt.plot(zwvl,Ig_ssim,'Color',[33,102,172]./255)
-    plt.plot(neon_wvl,Ig_ssim_resampled,'Color',[178,24,43]./255)
+    ssim_wvl = ssim_zwvl(26:225)
 
 
-
-    plt.legend('NIS Sampling','SSIM Sampling','SSIM Resampled to NIS')
-    plt.ylabel('Spectral Irradiance [W m^{-2} nm^{-1}]');
-    plt.xlabel('Wavelength [nm]')
-    plt.title('Modelled Downwelling Irradiance')
-    plt.set(gca,'FontSize',18)
-    plt.axis([720,800,0.7,1.3]);grid on;box on
-    plt.savefig('IrradianceDiffRespFunc_O2.svg','-dsvg')
-    plt.axis([350,1025,0,1.8]);
-    plt.savefig('IrradianceDiffRespFunc_Full.svg','-dsvg')
-
-    plt.figure;
-    plt.plot(neon_wvl,Ig_NIS-Ig_ssim_resampled,'k')
-    plt.ylabel('Spectral Irradiance [W m^{-2} nm^{-1}]');
-    plt.xlabel('Wavelength [nm]')
-    plt.title('Difference Between NIS and SSIM Sampling')
-    plt.axis([720,800,-0.15,0.1]);grid on;box on
-    plt.set(gca,'FontSize',18)
-    plt.print('DiffRespFunc_O2.svg','-dsvg')
 
     # Load Ground Reflectances
     sio.loadmat('/Users/wrightad/Documents/Data/NEON/GroundData/ASD_Refl/20150617_ASD_REFL.mat')
