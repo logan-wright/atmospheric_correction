@@ -17,6 +17,10 @@ import numpy as np
 import scipy.io as sio
 import matplotlib.pyplot as plt
 
+import modtran_tools
+import load_nis
+from super_resample import super_resample
+
 def standard_correction(Lobs,L0,I0,transmittance,spherical_albedo,mu):
     R = np.pi * (Lobs - L0) / (spherical_albedo * np.pi * (Lobs - L0) + mu * I0 * ( (Ts + ts) * (T + t) ) )
     return R
@@ -44,6 +48,20 @@ def mu_correction():
     rho_bar_ret_mu = (Ifup_obs_trim - Ifup0) ./ ((Ifdn_obs_trim .*(t_1km.^2 + (1 + mu) * t_1km .* sqrt(Tso_1km) + mu.*Tso_1km) + (Ifup_obs_trim - Ifup0) .* sph_alb_1km))
     R = (Rob - rad0 - (Ifdn_obs_trim .* (t_1km + sqrt(Tso_1km)) .* t_1km) ./ pi .* (rho_bar_ret_mu ./ (1 - rho_bar_ret_mu .* sph_alb_1km))) .* (pi ./ (Ifdn_obs_trim .* (t_1km + sqrt(Tso_1km)) .* mu .* sqrt(Tso_1km))) .* (1 - rho_bar_ret_mu .* sph_alb_1km)
 
+    disp('NoAdj Mu:');disp(sqrt(sum(((mean(veg_ret_noadj_mu,1)-veg_r)*100).^2)./numel(veg_r)))
+    disp('Ret Mu:');disp(sqrt(sum(((mean(veg_ret_mu,1)-veg_r)*100).^2)./numel(veg_r)))
+
+    figure;hold on;plot(neon_wvl,(mean(veg_ret,1)-veg_r)*100,'Color',enhanced)
+    plot(neon_wvl,(mean(veg_ret_noadj,1)-veg_r)*100,'Color',intermediate)
+    plot(neon_wvl,(mean(veg_ret_TOA_B,1)-veg_r)*100,'Color',standard);grid on;
+    RMSE_veg = [sqrt(sum(((mean(veg_ret,1)-veg_r)*100).^2)./numel(veg_r));
+        sqrt(sum(((mean(veg_ret_noadj,1)-veg_r)*100).^2)./numel(veg_r));
+        sqrt(sum(((mean(veg_ret_TOA_B,1)-veg_r)*100).^2)./numel(veg_r))];
+    RMSE_veg_no_wv = [sqrt(sum(((mean(veg_ret(:,wv_bands),1)-veg_r(wv_bands))*100).^2)./numel(veg_r(wv_bands)));
+        sqrt(sum(((mean(veg_ret_noadj(:,wv_bands),1)-veg_r(wv_bands))*100).^2)./numel(veg_r(wv_bands)));
+        sqrt(sum(((mean(veg_ret_TOA_B(:,wv_bands),1)-veg_r(wv_bands))*100).^2)./numel(veg_r(wv_bands)))];
+
+
 def load_ASD(filepath):
 
     return (wvl,R)
@@ -68,40 +86,47 @@ def atmcorr(wvl,radiance,model,irrad_up = None,irrad_down = None):
             pi .* (rho_bar_ret ./ (1 - rho_bar_ret .* sph_alb_1km))) .* ...
             (pi ./ (Ifdn_obs_trim .* (t_1km + sqrt(Tso_1km)) .* sqrt(Tso_1km))) .* (1 - rho_bar_ret .* sph_alb_1km)
 
-    flight_alb(j,:) = Rob*pi./Ifdn_obs_trim
-
-    plt.figure;hold on
-    # plot(neon_wvl,tarp3_ret_TOA,'Color',light_standard)
-    # plot(neon_wvl,tarp3_ret_noadj,'Color',light_intermediate) # Intermediate
-    # plot(neon_wvl,tarp3_ret,'Color',light_enhanced)
-    plt.plot(asd_wvl,mean(tarp03,1)'./100,'k','LineWidth',1.5)
-    # plot(neon_wvl,mean(tarp3_ret_TOA,1),'Color',standard,'LineWidth',1.5)
-    plt.plot(neon_wvl,mean(flight_alb,1),'Color',[153,163,164]./255,'LineWidth',1.5)
+def results_plot(FILL SPACE,save = False):
+    fig = plt.figure
+    ax = plt.subplot()
+    plt.plot(asd_wvl,mean(tarp03,1).T/100,'k','LineWidth',1.5)
+    plt.plot(neon_wvl,mean(flight_alb,1),'Color',[153,163,164]/255,'LineWidth',1.5)
     plt.plot(neon_wvl,mean(tarp3_ret_TOA_B,1),'-','Color',standard,'LineWidth',1.5)
     plt.plot(neon_wvl,mean(tarp3_ret_noadj,1),'Color',intermediate,'LineWidth',1.5) # Intermediate
     plt.plot(neon_wvl,mean(tarp3_ret,1),'Color',enhanced,'LineWidth',1.5)
-    plt.ylabel('Reflectance','FontSize',12);xlabel('Wavelength [nm]','FontSize',12);
+    plt.ylabel('Reflectance','FontSize',12)
+    plt.xlabel('Wavelength [nm]','FontSize',12)
     plt.axis([350,1025,0,0.1])
-    plt.set(gca,'FontSize',12,'XColor','k','YColor','k');box on;
-    fig = plt.gcf;
-    plt.set(fig,'PaperUnits','inches','PaperPosition',[0 0 4 4]);
-    plt.savefig(fig,'-depsc','-r300','TestTarp3Retrieval.eps')
 
-    wv_bands = xor(neon_wvl < 928, neon_wvl > 989);
-    wv_bands = xor(wv_bands,neon_wvl > 1095);
+    if save == True:
+        plt.set(gca,'FontSize',12,'XColor','k','YColor','k')
+        plt.set(fig,'PaperUnits','inches','PaperPosition',[0 0 4 4])
+        plt.savefig(NAME + '.eps',dpi = 300, format = 'eps')
 
-    tarp03_r = super_resample(mean(tarp03,1),asd_wvl,neon_wvl,neon_fwhm)'./100;
+def calc_rmse(RMSE_noWV,RMSE,Retrievals = ('Standard', 'Standard with Adj Correction', 'Enhanced', 'Enhanced with Adj Correction')):
+    '''
+    RMSE should be in format of list (name (string),RMSE, RMSE, RMSE, RMSE, ...)
+    '''
 
-    plt.figure;hold on;plot(neon_wvl,(mean(tarp3_ret,1)-tarp03_r)*100,'Color',enhanced)
-    plt.plot(neon_wvl,(mean(tarp3_ret_noadj,1)-tarp03_r)*100,'Color',intermediate)
-    plt.plot(neon_wvl,(mean(tarp3_ret_TOA_B,1)-tarp03_r)*100,'Color',standard);grid on;
-    RMSE_tarp3 = [sqrt(sum(((mean(tarp3_ret,1)-tarp03_r)*100).^2)./numel(tarp03_r));
-        sqrt(sum(((mean(tarp3_ret_noadj,1)-tarp03_r)*100).^2)./numel(tarp03_r));
-        sqrt(sum(((mean(tarp3_ret_TOA_B,1)-tarp03_r)*100).^2)./numel(tarp03_r))];
-    RMSE_tarp3_no_wv = [sqrt(sum(((mean(tarp3_ret(:,wv_bands),1)-tarp03_r(wv_bands))*100).^2)./numel(tarp03_r(wv_bands)));
-        sqrt(sum(((mean(tarp3_ret_noadj(:,wv_bands),1)-tarp03_r(wv_bands))*100).^2)./numel(tarp03_r(wv_bands)));
-        sqrt(sum(((mean(tarp3_ret_TOA_B(:,wv_bands),1)-tarp03_r(wv_bands))*100).^2)./numel(tarp03_r(wv_bands)))];
-    plt.title('Tarp 3#')
+
+        # Write file of RMS Error
+    wv_bands = np.logical_xor(neon_wvl < 928, neon_wvl > 989)
+    wv_bands = np.logical_xor(wv_bands,neon_wvl > 1095)
+
+
+    N = len(RMSE)
+    fid = open('RMSE_Output_No_WV.txt','w');
+    fid.write({'\t {}'*len(Retrievals)+'\n'}.format(Retrievals))
+    for item in input:
+        fid.write('{}' + '\t {:4.2f}'*N).format(item['name'],item['vals'])
+    fclose(fid)
+
+
+    fid = fopen('RMSE_Output.txt','w');
+    fid.write({'\t {}'*len(Retrievals)+'\n'}.format(Retrievals))
+    for item in input:
+        fid.write('{}' + '\t {:4.2f}'*N).format(item['name'],item['vals'])
+    fclose(fid)
 
 def sampling_issue(I0_orig,SunEllipticFactor,zwvl,ssim_zfwhm,neon_wvl,neon_fwhm,t_Ts,t_ts):
     # Demonstrate Sampling Issue
@@ -134,6 +159,72 @@ def sampling_issue(I0_orig,SunEllipticFactor,zwvl,ssim_zfwhm,neon_wvl,neon_fwhm,
     plt.set(gca,'FontSize',18)
     plt.savefig('DiffRespFunc_O2.svg','svg')
 
+def empirical_wvl_fit():
+    # save('Emp_Fit_SSIM_Jun16_Tarp48.mat','neon_wvl','tarp48_ret','tarp48_ret_TOA')
+
+    # Test "Empirical Smoothing"
+    # "Best" fit NIS offset is 1.28
+    dlambda_NIS = -1.3:0.01:-1.2;#1.28;#1.2:0.01:1.4;
+    neon_wvl2 = repmat(neon_wvl,1,length(dlambda_NIS)) + repmat(dlambda_NIS,152,1);
+    dlambda_SSIM_zen = -3:0.1:3;
+    zwvl2 = repmat(zwvl,1,length(dlambda_SSIM_zen)) + repmat(dlambda_SSIM_zen,439,1);
+    for x = 1:length(dlambda_NIS)
+        rad0 = super_resample(r0,flx_wvl,neon_wvl2(:,x),neon_fwhm);
+        T_wvl = super_resample(t_T_1km,wvl,neon_wvl2(:,x),neon_fwhm);
+        t_wvl = super_resample(t_t_1km,wvl,neon_wvl2(:,x),neon_fwhm);
+        Ts_wvl = super_resample(t_Ts_1km,wvl,neon_wvl2(:,x),neon_fwhm);
+        ts_wvl = super_resample(t_ts_1km,wvl,neon_wvl2(:,x),neon_fwhm);
+        Tso_wvl = super_resample(t_Tso_1km,wvl,neon_wvl2(:,x),neon_fwhm);
+        sph_alb_layer = super_resample(t_sph_alb_1km,wvl,neon_wvl2(:,x),neon_fwhm);
+        Tsts_Tt = super_resample((t_Ts + t_ts).*(t_T+t_t),wvl,neon_wvl2(:,x),neon_fwhm);
+
+        tarp48_ret_TOA_WVLS(:,x) = pi.*(Rob-rad0)./(sph_alb.*pi.*(Rob-rad0)+mu.*I0.*(Tsts_Tt));
+
+        for y = 1:length(dlambda_SSIM_zen)
+            Ifdn_obs_trim = super_resample(zspect(ssirtime_ind,:)',zwvl2(:,y),neon_wvl2(:,x),neon_fwhm);
+            Ifup_obs_trim = super_resample(nspect(ssirtime_ind,:)',nwvl,neon_wvl2(:,x),neon_fwhm);
+            Ifup0 = super_resample(rho_a_I,flx_wvl,neon_wvl2(:,x),neon_fwhm).*Ifdn_obs_trim;
+
+            tarp48_ret_noadj_WVLS(:,x,y) = pi .* (Rob - rad0) ./ (sph_alb_layer .* pi .* ...
+                (Rob - rad0) + Ifdn_obs_trim .* (T_wvl + t_wvl).^2);
+            tarp48_ret_noadj_WVLS2(:,x,y) = pi .* (Rob - rad0) ./ (sph_alb_layer .* pi .* ...
+                (Rob - rad0) + Ifdn_obs_trim .* (t_wvl.^2 + 2 * t_wvl .* sqrt(Tso_wvl) + Tso_wvl));
+        end
+    end
+
+
+
+    dlambda_SSIM_zen = -5:0.1:3;
+    zwvl2 = repmat(zwvl,1,length(dlambda_SSIM_zen)) + repmat(dlambda_SSIM_zen,439,1);
+    for x = 1:length(dlambda_SSIM_zen)
+        Ifdn_obs_trim = super_resample(zspect(ssirtime_ind,:)',zwvl2(:,y),neon_wvl,neon_fwhm);
+        tarp48_ret_TEST(:,x) = pi.*(Rob-rad0)./(sph_alb_layer.*pi.*(Rob-rad0) + Ifdn_obs_trim.*(Tt2_d(1:152)));
+    end
+
+    dlambda_SSIM_nad = -3:0.1:3;
+    # dfwhm = -3:0.1:3;
+    neon_wvl2 = repmat(neon_wvl,1,length(dlambda_NIS)) + repmat(dlambda_NIS,152,1);
+    nwvl2 = repmat(nwvl,1,length(dlambda_SSIM_nad)) + repmat(dlambda_SSIM_nad,256,1);
+    zwvl2 = repmat(zwvl,1,length(dlambda_SSIM_zen)) + repmat(dlambda_SSIM_zen,439,1);
+    neon_fwhm2 = repmat(neon_fwhm,1,length(dfwhm)) + repmat(dfwhm,152,1);
+    Rob = mean(tarp48_spc(:,1:152),1)';
+    for x = 1:length(dlambda_SSIM_zen)
+    #     rad_resample = super_resample(data_rad(:,2)./100,data_rad(:,1),neon_wvl2(:,x),neon_fwhm);
+    #     sph_alb_resample(:,1) = super_resample(sph_alb_orig(:,1),wvl,neon_wvl2(:,x),neon_fwhm);
+    #     sph_alb_resample(:,2) = super_resample(sph_alb_orig(:,2),wvl,neon_wvl2(:,x),neon_fwhm);
+    #     Ts_resample = super_resample(Ts_orig(:,1),wvl,neon_wvl2(:,x),neon_fwhm);
+    #     ts_resample = super_resample(ts_orig(:,1),wvl,neon_wvl2(:,x),neon_fwhm);
+    #     T_resample = super_resample(T_orig(:,1),wvl,neon_wvl2(:,x),neon_fwhm);
+    #     t_resample = super_resample(t_orig(:,1),wvl,neon_wvl2(:,x),neon_fwhm);
+    #     sph_alb_layer_resample = (sph_alb_resample(:,1)-sph_alb_resample(:,2).*(t_resample(:,1)+T_resample(:,1)))./(1-sph_alb_resample(:,2).*(t_resample(:,1)+T_resample(:,1)));
+        for y = 1:length(dlambda_SSIM_nad)
+            Ifdn_obs_trim_NIS_SSIM = super_resample(Ifdn_obs',zwvl2(:,x),neon_wvl,neon_fwhm);
+            Ifup_obs_trim_NIS_SSIM = super_resample(Ifup_obs',nwvl2(:,y),neon_wvl,neon_fwhm);
+            Ifup0_resample = rho_a_I.*Ifdn_obs_trim_NIS_SSIM;
+            rad0_resample = rho_a_R.*Ifdn_obs_trim_NIS_SSIM;
+            rho_bar_ret_NIS_SSIM = (Ifup_obs_trim_NIS_SSIM-Ifup0_resample)./((Ifdn_obs_trim_NIS_SSIM.*(T(:,1)+t(:,1)).^2)+(Ifup_obs_trim_NIS_SSIM-Ifup0_resample).*sph_alb_layer);
+
+            tarp48_ret_SSIM_TEST(:,x,y) = (Rob - rad0_resample - (Ifdn_obs_trim_NIS_SSIM.*(T(:,1)+t(:,1)).*t(:,1))./pi.*(rho_bar_ret_NIS_SSIM./(1-rho_bar_ret_NIS_SSIM.*sph_alb_layer))).*(pi./(Ifdn_obs_trim_NIS_SSIM.*(T(:,1)+t(:,1)).*T(:,1))).*(1-rho_bar_ret_NIS_SSIM.*sph_alb_layer);
 
 if __name__ == '__main__':
     # Below Cloud Surface Reflectance Retrieval
@@ -296,7 +387,7 @@ if __name__ == '__main__':
     nwvl = nwvl
 
     ssim_zwvl = zwvl
-    ssim_zfwhm0 = np.array((365.25, 7.67),
+    ssim_zfwhm0 = np.array(((365.25, 7.67),
                    (404.84, 8.11),
                    (435.83, 7.25),
                    (546.07, 7.88),
@@ -305,75 +396,75 @@ if __name__ == '__main__':
                    (1244.30, 12.70),
                    (1694.06, 9.75),
                    (1791.46, 10.79),
-                   (2061.62, 17.58))
+                   (2061.62, 17.58)))
     ssim_zfwhm = np.zeros((439,1))
     ssim_zfwhm[0:192] = np.interp(ssim_zfwhm0(0:5,0),ssim_zfwhm0(0:5,1),ssim_zwvl(0:192),'linear','extrap')
     ssim_zfwhm[193:end] = np.interp(ssim_zfwhm0(5:,0),ssim_zfwhm0(5:,1),ssim_zwvl(193:),'linear','extrap')
     ssim_nwvl = nwvl
-    ssim_nfwhm0 = np.array((365.25, 7.50),
+    ssim_nfwhm0 = np.array(((365.25, 7.50),
                    (404.84, 7.85),
                    (435.83, 7.28),
                    (546.07, 8.16),
-                   (912.30, 10.75))
-    ssim_nfwhm = np.interp(ssim_nfwhm0(:,1),ssim_nfwhm0(:,2),ssim_nwvl,'linear','extrap')
+                   (912.30, 10.75)))
+    ssim_nfwhm = np.interp(ssim_nfwhm0(:,0),ssim_nfwhm0(:,1),ssim_nwvl,'linear','extrap')
 
-    ssim_wvl = ssim_zwvl(26:225)
+    ssim_wvl = ssim_zwvl(25:225)
 
 
 
     # Load Ground Reflectances
-    sio.loadmat('/Users/wrightad/Documents/Data/NEON/GroundData/ASD_Refl/20150617_ASD_REFL.mat')
+    asd_20150617 = sio.loadmat('/Users/wrightad/Documents/Data/NEON/GroundData/ASD_Refl/20150617_ASD_REFL.mat')
     # Average Ground Reflectance Spectra
-    tarp3_asd17 = super_resample(mean(tarp03,1)',asd_wvl',neon_wvl,neon_fwhm)./100;
-    tarp48_asd17 = super_resample(mean(tarp48,1)',asd_wvl',neon_wvl,neon_fwhm)./100;
-    veg_asd17 = super_resample(mean(veg,1)',asd_wvl',neon_wvl,neon_fwhm)./100;
-    ewroad_asd17 = super_resample(mean(ewroad,1)',asd_wvl',neon_wvl,neon_fwhm)./100;
-    nsroad_asd17 = super_resample(mean(nsroad,1)',asd_wvl',neon_wvl,neon_fwhm)./100;
+    tarp3_asd17 = super_resample(np.mean(asd_20150617['tarp03'],axis = 0),asd_20150617['asd_wvl'],neon_wvl,neon_fwhm)/100
+    tarp48_asd17 = super_resample(np.mean(asd_20150617['tarp48'],axis = 0),asd_20150617['asd_wvl'],neon_wvl,neon_fwhm)/100
+    veg_asd17 = super_resample(np.mean(asd_20150617['veg'],axis = 0),asd_20150617['asd_wvl'],neon_wvl,neon_fwhm)/100
+    ewroad_asd17 = super_resample(np.mean(asd_20150617['ewroad'],axis = 0),asd_20150617['asd_wvl'],neon_wvl,neon_fwhm)/100
+    nsroad_asd17 = super_resample(np.mean(asd_20150617['nsroad'],axis = 0),asd_20150617['asd_wvl'],neon_wvl,neon_fwhm)/100
 
-    sio.loadmat('/Users/wrightad/Documents/Data/NEON/GroundData/ASD_Refl/20150616_ASD_REFL.mat')
+    asd_20150616 = sio.loadmat('/Users/wrightad/Documents/Data/NEON/GroundData/ASD_Refl/20150616_ASD_REFL.mat')
     # Average Ground Reflectance Spectra
-    tarp3_asd16 = super_resample(mean(tarp03,1)',asd_wvl',neon_wvl,neon_fwhm)./100;
-    tarp48_asd16 = super_resample(mean(tarp48,1)',asd_wvl',neon_wvl,neon_fwhm)./100;
-    veg_asd16 = super_resample(mean(veg,1)',asd_wvl',neon_wvl,neon_fwhm)./100;
-    ewroad_asd16 = super_resample(mean(ewroad,1)',asd_wvl',neon_wvl,neon_fwhm)./100;
-    nsroad_asd16 = super_resample(mean(nsroad,1)',asd_wvl',neon_wvl,neon_fwhm)./100;
+    tarp3_asd16 = super_resample(np.mean(asd_20150616['tarp03'],axis = 0),asd_20150616['asd_wvl'],neon_wvl,neon_fwhm)/100
+    tarp48_asd16 = super_resample(np.mean(asd_20150616['tarp48'],axis = 0),asd_20150616['asd_wvl'],neon_wvl,neon_fwhm)/100
+    veg_asd16 = super_resample(np.mean(asd_20150616['veg'],axis = 0),asd_20150616['asd_wvl'],neon_wvl,neon_fwhm)/100
+    ewroad_asd16 = super_resample(np.mean(asd_20150616['ewroad'],axis = 0),asd_20150616['asd_wvl'],neon_wvl,neon_fwhm)/100
+    nsroad_asd16 = super_resample(np.mean(asd_20150616['nsroad'],axis = 0),asd_20150616['asd_wvl'],neon_wvl,neon_fwhm)/100
 
 
-    sio.loadmat('/Users/wrightad/Documents/Data/NEON/GroundData/ASD_Refl/20150608_ASD_REFL.mat')
+    asd_20150608 = sio.loadmat('/Users/wrightad/Documents/Data/NEON/GroundData/ASD_Refl/20150608_ASD_REFL.mat')
     # Average Ground Reflectance Spectra
-    tarp3_asd08 = super_resample(mean(tarp03,1)',asd_wvl,neon_wvl,neon_fwhm)./100;
-    tarp48_asd08 = super_resample(mean(tarp48,1)',asd_wvl,neon_wvl,neon_fwhm)./100;
-    veg_asd08 = super_resample(mean(veg,1)',asd_wvl,neon_wvl,neon_fwhm)./100;
-    ewroad_asd08 = super_resample(mean(ewroad,1)',asd_wvl,neon_wvl,neon_fwhm)./100;
-    nsroad_asd08 = super_resample(mean(nsroad,1)',asd_wvl,neon_wvl,neon_fwhm)./100;
+    tarp3_asd08 = super_resample(np.mean(asd_20150608['tarp03'],axis = 0),asd_20150608['asd_wvl'],neon_wvl,neon_fwhm)/100
+    tarp48_asd08 = super_resample(np.mean(asd_20150608['tarp48'],axis = 0),asd_20150608['asd_wvl'],neon_wvl,neon_fwhm)/100
+    veg_asd08 = super_resample(np.mean(asd_20150608['veg'],axis = 0),asd_20150608['asd_wvl'],neon_wvl,neon_fwhm)/100
+    ewroad_asd08 = super_resample(np.mean(asd_20150608['ewroad'],axis = 0),asd_20150608['asd_wvl'],neon_wvl,neon_fwhm)/100
+    nsroad_asd08 = super_resample(np.mean(asd_20150608['nsroad'],axis = 0),asd_20150608['asd_wvl'],neon_wvl,neon_fwhm)/100
 
-    plt.figure;plt.subplot(2,2,1);plt.plot(neon_wvl,tarp3_asd17,'k--');hold on;
-    plt.plot(neon_wvl,tarp3_asd16,'k:');
-    plt.plot(neon_wvl,tarp3_asd08,'k');
-    plt.subplot(2,2,2);plt.plot(neon_wvl,tarp48_asd17,'b--');hold on
-    plt.plot(neon_wvl,tarp48_asd16,'b:');
-    plt.plot(neon_wvl,tarp48_asd08,'b');
-    plt.subplot(2,2,3);plt.plot(neon_wvl,veg_asd17,'Color',[34,139,34]./255,'LineStyle','--');hold on
-    plt.plot(neon_wvl,veg_asd16,'Color',[34,139,34]./255,'LineStyle',':');
-    plt.plot(neon_wvl,veg_asd08,'Color',[34,139,34]./255);
-    plt.subplot(2,2,4);plot(neon_wvl,ewroad_asd17,'Color',[156,102,31]./255,'LineStyle','--');hold on
-    plt.plot(neon_wvl,ewroad_asd16,'Color',[156,102,31]./255,'LineStyle',':');
-    plt.plot(neon_wvl,ewroad_asd08,'Color',[156,102,31]./255);
+    plt.figure;plt.subplot(2,2,1);plt.plot(neon_wvl,tarp3_asd17,'k--')
+    plt.plot(neon_wvl,tarp3_asd16,'k:')
+    plt.plot(neon_wvl,tarp3_asd08,'k')
+
+    plt.subplot(2,2,2);plt.plot(neon_wvl,tarp48_asd17,'b--')
+    plt.plot(neon_wvl,tarp48_asd16,'b:')
+    plt.plot(neon_wvl,tarp48_asd08,'b')
+
+    plt.subplot(2,2,3);plt.plot(neon_wvl,veg_asd17,'Color',[34,139,34]./255,'LineStyle','--')
+    plt.plot(neon_wvl,veg_asd16,'Color',[34,139,34]./255,'LineStyle',':')
+    plt.plot(neon_wvl,veg_asd08,'Color',[34,139,34]./255)
+
+    plt.subplot(2,2,4);plot(neon_wvl,ewroad_asd17,'Color',[156,102,31]./255,'LineStyle','--')
+    plt.plot(neon_wvl,ewroad_asd16,'Color',[156,102,31]./255,'LineStyle',':')
+    plt.plot(neon_wvl,ewroad_asd08,'Color',[156,102,31]./255)
     plt.legend('Jun 17','Jun 16','Jun 8')
 
-    # plot(neon_wvl,nsroad_asd17,'Color',[156,102,31]./255);
-    # plot(neon_wvl,nsroad_asd16,'Color',[156,102,31]./255);
-    # plot(neon_wvl,nsroad_asd08,'Color',[156,102,31]./255);
-
-    sio.loadmat(asdfile)
+    asdtemp = sio.loadmat(asdfile)
+    asd_wvl = asdtemp['asd_wvl']
     # asd_wvl = asd_wvl';
     if date == '20150608':
         asd_wvl = asd_wvl.T
 
     # Modelled vs Measured Irradiances
-    obs_time = np.reshape(nistime(tarp3_coord(2,1):tarp3_coord(2,2),tarp3_coord(1,1):tarp3_coord(1,2)),1,[]);
-    [~,ssirtime_ind] = np.min(np.abs(ssirtime-obs_time(1)));
-    Ifdn_obs_trim = zspect(ssirtime_ind,:);
+    obs_time = np.reshape(nistime(tarp3_coord[1,0]:tarp3_coord[1,1],tarp3_coord[0,0]:tarp3_coord[0,1]),(1,-1));
+    [~,ssirtime_ind] = np.min(np.abs(ssirtime-obs_time[0]));
+    Ifdn_obs_trim = zspect[ssirtime_ind,:];
 
     # Extract Pixel/Observation Radiance Spectrum
     rad0 = super_resample(r0,wvl_7sc,neon_wvl,neon_fwhm);
@@ -388,30 +479,30 @@ if __name__ == '__main__':
     #     Ifup_obs_trim = super_resample(nspect(ssirtime_ind,:)',nwvl,neon_wvl,neon_fwhm);
     #
 
-    plt.figure;hold on;
-    plt.plot(neon_wvl0,super_resample(flx_fdn/mu,flx_wvl,neon_wvl0,neon_fwhm0)*10000,'r');
-    plt.plot(zwvl,Ifdn_obs_trim,'k');
+    plt.figure()
+    plt.plot(neon_wvl0,super_resample(flx_fdn/mu,flx_wvl,neon_wvl0,neon_fwhm0)*10000,'r')
+    plt.plot(zwvl,Ifdn_obs_trim,'k')
 
-    model_Ifdn = super_resample(flx_fdn/mu,flx_wvl,neon_wvl0,neon_fwhm0)*10000;
-    obs_Ifdn = Ifdn_obs_trim;
+    model_Ifdn = super_resample(flx_fdn/mu,flx_wvl,neon_wvl0,neon_fwhm0)*10000
+    obs_Ifdn = Ifdn_obs_trim
 
     sio.save(date.format('%s')+'_downirradcomp.mat'),{'model_Ifdn':model_Ifdn,'obs_Ifdn':obs_Ifdn,'neon_wvl0':neon_wvl0,'zwvl':zwvl)
 
     ## Section 2: Processing
     # Extract Ground Spectra from NIS Scene
-    tarp3_spc = np.reshape(data(tarp3_coord(2,1):tarp3_coord(2,2),tarp3_coord(1,1):tarp3_coord(1,2),:),[],426);
-    tarp48_spc = np.reshape(data(tarp48_coord(2,1):tarp48_coord(2,2),tarp48_coord(1,1):tarp48_coord(1,2),:),[],426);
-    veg_spc = np.reshape(data(veg_coord(2,1):veg_coord(2,2),veg_coord(1,1):veg_coord(1,2),:),[],426);
-    EWroad_spc = np.reshape(data(EWroad_coord(2,1):EWroad_coord(2,2),EWroad_coord(1,1):EWroad_coord(1,2),:),[],426);
-    NSroad_spc = np.reshape(data(NSroad_coord(2,1):NSroad_coord(2,2),NSroad_coord(1,1):NSroad_coord(1,2),:),[],426);
+    tarp3_spc = np.reshape(data(tarp3_coord[1,0]:tarp3_coord[1,1],tarp3_coord[0,0]:tarp3_coord[0,1],:),(-1,426))
+    tarp48_spc = np.reshape(data(tarp48_coord[1,0]:tarp48_coord[1,1],tarp48_coord[0,0]:tarp48_coord[0,1],:),(-1,426))
+    veg_spc = np.reshape(data(veg_coord[1,0]:veg_coord[1,1],veg_coord[0,0]:veg_coord[0,1],:),(-1,426))
+    EWroad_spc = np.reshape(data(EWroad_coord[1,0]:EWroad_coord[1,1],EWroad_coord[0,0]:EWroad_coord[0,1],:),(-1,426))
+    NSroad_spc = nnp.reshape(data(NSroad_coord[1,0]:NSroad_coord[1,1],NSroad_coord[0,0]:NSroad_coord[0,1],:),(-1,426))
 
     # Set Color Tables
-    enhanced = [178,24,43]./255;
-    light_enhanced = [253,219,199]./255;
-    intermediate = [211,84,0]./255;
-    light_intermediate = [235,152,78]./255;
-    standard = [33,102,172]./255;
-    light_standard = [146,197,222]./255;
+    enhanced = [178,24,43]/255
+    light_enhanced = [253,219,199]/255
+    intermediate = [211,84,0]/255
+    light_intermediate = [235,152,78]/255
+    standard = [33,102,172]/255
+    light_standard = [146,197,222]/255
 
     # Full Resolution Calculation
     Tsts_Tt = super_resample((t_Ts + t_ts).*(t_T+t_t),wvl,neon_wvl,neon_fwhm);
@@ -778,153 +869,6 @@ if __name__ == '__main__':
         sqrt(sum(((mean(veg_ret_TOA_B(:,wv_bands),1)-veg_r(wv_bands))*100).^2)./numel(veg_r(wv_bands)))];
     title('Vegetation')
 
-    ##### EW Road #############################################################
-    # Match NIS & SSIR Time
-    obs_time = nistime(EWroad_coord(2,1):EWroad_coord(2,2),EWroad_coord(1,1):EWroad_coord(1,2));
-    n = numel(obs_time);
-    for j = 1:n
-        # Extract Pixel/Observation Radiance Spectrum
-        Rob = EWroad_spc(j,1:152)';
-        rad0 = super_resample(r0,wvl_7sc,neon_wvl,neon_fwhm);
-        # TOA Retrieval
-        EWroad_ret_TOA(j,:) = pi.*(Rob-rad0)./(sph_alb.*pi.*(Rob-rad0)+mu.*I0.*((Ts + ts).*(T + t)));
-        EWroad_ret_TOA_B(j,:) = pi.*(Rob-rad0)./(sph_alb.*pi.*(Rob-rad0)+mu.*I0.*(Tsts_Tt));
 
-        # Observation Retrieval
-        [~,ssirtime_ind] = min(abs(ssirtime-obs_time(j)));
 
-        Ifdn_obs_trim = super_resample(zspect(ssirtime_ind,:)',zwvl,neon_wvl,neon_fwhm);
-        Ifup_obs_trim = super_resample(nspect(ssirtime_ind,:)',nwvl,neon_wvl,neon_fwhm);
-
-        Ifup0 = super_resample(rho_a_I,flx_wvl,neon_wvl,neon_fwhm).*Ifdn_obs_trim;
-        rad0 = super_resample(rho_a_R,flx_wvl,neon_wvl,neon_fwhm).*Ifdn_obs_trim;
-
-        EWroad_ret_noadj(j,:) = pi .* (Rob - rad0) ./ (sph_alb_1km .* pi .* ...
-            (Rob - rad0) + Ifdn_obs_trim .* (t_1km.^2 + 2 * t_1km .* sqrt(Tso_1km) + Tso_1km));
-
-        rho_bar_ret = (Ifup_obs_trim - Ifup0) ./ ((Ifdn_obs_trim .* ...
-            ((t_1km + sqrt(Tso_1km)).^2) + (Ifup_obs_trim - Ifup0) .* sph_alb_1km));
-        EWroad_ret(j,:) = (Rob - rad0 - (Ifdn_obs_trim .* (t_1km + sqrt(Tso_1km)) .* t_1km) ./ ...
-            pi .* (rho_bar_ret ./ (1 - rho_bar_ret .* sph_alb_1km))) .* ...
-            (pi ./ (Ifdn_obs_trim .* (t_1km + sqrt(Tso_1km)) .* sqrt(Tso_1km))) .* (1 - rho_bar_ret .* sph_alb_1km);
-
-        flight_alb(j,:) = Rob*pi./Ifdn_obs_trim;
-    end
-    figure;hold on
-    # plot(neon_wvl,EWroad_ret_TOA,'Color',light_standard)
-    # plot(neon_wvl,EWroad_ret_noadj,'Color',light_intermediate) # Intermediate
-    # plot(neon_wvl,EWroad_ret,'Color',light_enhanced)
-    plot(asd_wvl,mean(ewroad,1)'./100,'k','LineWidth',1.5)
-    # plot(neon_wvl,mean(EWroad_ret_TOA,1),'Color',standard,'LineWidth',1.5)
-    plot(neon_wvl,mean(flight_alb,1),'Color',[153,163,164]./255,'LineWidth',1.5)
-    plot(neon_wvl,mean(EWroad_ret_TOA_B,1),'-','Color',standard,'LineWidth',1.5)
-    plot(neon_wvl,mean(EWroad_ret_noadj,1),'Color',intermediate,'LineWidth',1.5) # Intermediate
-    plot(neon_wvl,mean(EWroad_ret,1),'Color',enhanced,'LineWidth',1.5)
-    ylabel('Reflectance','FontSize',12);xlabel('Wavelength [nm]','FontSize',12);
-    axis([350,1025,0,0.60])
-    set(gca,'FontSize',12,'XColor',[156,102,31]./255,'YColor',[156,102,31]./255);box on
-    fig = gcf;
-    set(fig,'PaperUnits','inches','PaperPosition',[0 0 4 4]);
-    print(gcf,'-depsc','-r300','TestEWroadRetrieval.eps')
-
-    ewroad_r = super_resample(mean(ewroad,1),asd_wvl,neon_wvl,neon_fwhm)'./100;
-
-    figure;hold on;plot(neon_wvl,(mean(EWroad_ret,1)-ewroad_r)*100,'Color',enhanced)
-    plot(neon_wvl,(mean(EWroad_ret_noadj,1)-ewroad_r)*100,'Color',intermediate)
-    plot(neon_wvl,(mean(EWroad_ret_TOA_B,1)-ewroad_r)*100,'Color',standard);grid on
-    RMSE_EWroad = [sqrt(sum(((mean(EWroad_ret,1)-ewroad_r)*100).^2)./numel(ewroad_r));
-        sqrt(sum(((mean(EWroad_ret_noadj,1)-ewroad_r)*100).^2)./numel(ewroad_r));
-        sqrt(sum(((mean(EWroad_ret_TOA_B,1)-ewroad_r)*100).^2)./numel(ewroad_r))];
-    RMSE_EWroad_no_wv = [sqrt(sum(((mean(EWroad_ret(:,wv_bands),1)-ewroad_r(wv_bands))*100).^2)./numel(ewroad_r(wv_bands)));
-        sqrt(sum(((mean(EWroad_ret_noadj(:,wv_bands),1)-ewroad_r(wv_bands))*100).^2)./numel(ewroad_r(wv_bands)));
-        sqrt(sum(((mean(EWroad_ret_TOA_B(:,wv_bands),1)-ewroad_r(wv_bands))*100).^2)./numel(ewroad_r(wv_bands)))];
-    title('EW Road')
-
-    ##### NS Road #############################################################
-    # Match NIS & SSIR Time
-    obs_time = nistime(NSroad_coord(2,1):NSroad_coord(2,2),NSroad_coord(1,1):NSroad_coord(1,2));
-    n = numel(obs_time);
-    for j = 1:n
-        # Extract Pixel/Observation Radiance Spectrum
-        Rob = NSroad_spc(j,1:152)';
-        rad0 = super_resample(r0,wvl_7sc,neon_wvl,neon_fwhm);
-        # TOA Retrieval
-        NSroad_ret_TOA(j,:) = pi.*(Rob-rad0)./(sph_alb.*pi.*(Rob-rad0)+mu.*I0.*((Ts + ts).*(T + t)));
-        NSroad_ret_TOA_B(j,:) = pi.*(Rob-rad0)./(sph_alb.*pi.*(Rob-rad0)+mu.*I0.*(Tsts_Tt));
-
-        # Observation Retrieval
-        [~,ssirtime_ind] = min(abs(ssirtime-obs_time(j)));
-
-        Ifdn_obs_trim = super_resample(zspect(ssirtime_ind,:)',zwvl,neon_wvl,neon_fwhm);
-        Ifup_obs_trim = super_resample(nspect(ssirtime_ind,:)',nwvl,neon_wvl,neon_fwhm);
-
-        Ifup0 = super_resample(rho_a_I,flx_wvl,neon_wvl,neon_fwhm).*Ifdn_obs_trim;
-        rad0 = super_resample(rho_a_R,flx_wvl,neon_wvl,neon_fwhm).*Ifdn_obs_trim;
-
-        NSroad_ret_noadj(j,:) = pi .* (Rob - rad0) ./ (sph_alb_1km .* pi .* ...
-            (Rob - rad0) + Ifdn_obs_trim .* (t_1km.^2 + 2 * t_1km .* sqrt(Tso_1km) + Tso_1km));
-
-        rho_bar_ret = (Ifup_obs_trim - Ifup0) ./ ((Ifdn_obs_trim .* ...
-            ((t_1km + sqrt(Tso_1km)).^2) + (Ifup_obs_trim - Ifup0) .* sph_alb_1km));
-        NSroad_ret(j,:) = (Rob - rad0 - (Ifdn_obs_trim .* (t_1km + sqrt(Tso_1km)) .* t_1km) ./ ...
-            pi .* (rho_bar_ret ./ (1 - rho_bar_ret .* sph_alb_1km))) .* ...
-            (pi ./ (Ifdn_obs_trim .* (t_1km + sqrt(Tso_1km)) .* sqrt(Tso_1km))) .* (1 - rho_bar_ret .* sph_alb_1km);
-
-        flight_alb(j,:) = Rob*pi./Ifdn_obs_trim;
-    end
-    figure;hold on
-    # plot(neon_wvl,NSroad_ret_TOA,'Color',light_standard)
-    # plot(neon_wvl,NSroad_ret_noadj,'Color',light_intermediate) # Intermediate
-    # plot(neon_wvl,NSroad_ret,'Color',light_enhanced)
-    plot(asd_wvl,mean(nsroad,1)'./100,'k','LineWidth',1.5)
-    # plot(neon_wvl,mean(NSroad_ret_TOA,1),'Color',standard,'LineWidth',1.5)
-    plot(neon_wvl,mean(flight_alb,1),'Color',[153,163,164]./255,'LineWidth',1.5)
-    plot(neon_wvl,mean(NSroad_ret_TOA_B,1),'-','Color',standard,'LineWidth',1.5)
-    plot(neon_wvl,mean(NSroad_ret_noadj,1),'Color',intermediate,'LineWidth',1.5) # Intermediate
-    plot(neon_wvl,mean(NSroad_ret,1),'Color',enhanced,'LineWidth',1.5)
-    ylabel('Reflectance','FontSize',12);xlabel('Wavelength [nm]','FontSize',12);
-    axis([350,1025,0,0.6])
-    set(gca,'FontSize',12,'XColor',[156,102,31]./255,'YColor',[156,102,31]./255);box on
-    fig = gcf;
-    set(fig,'PaperUnits','inches','PaperPosition',[0 0 4 4]);
-    print(gcf,'-depsc','-r300','TestNSroadRetrieval.eps')
-
-    nsroad_r = super_resample(mean(nsroad,1),asd_wvl,neon_wvl,neon_fwhm)'./100;
-
-    figure;hold on;plot(neon_wvl,(mean(NSroad_ret,1)-nsroad_r)*100,'Color',enhanced)
-    plot(neon_wvl,(mean(NSroad_ret_noadj,1)-nsroad_r)*100,'Color',intermediate)
-    plot(neon_wvl,(mean(NSroad_ret_TOA_B,1)-nsroad_r)*100,'Color',standard);grid on;
-    RMSE_NSroad = [sqrt(sum(((mean(NSroad_ret,1)-nsroad_r)*100).^2)./numel(nsroad_r));
-        sqrt(sum(((mean(NSroad_ret_noadj,1)-nsroad_r)*100).^2)./numel(nsroad_r));
-        sqrt(sum(((mean(NSroad_ret_TOA_B,1)-nsroad_r)*100).^2)./numel(nsroad_r))];
-    RMSE_NSroad_no_wv = [sqrt(sum(((mean(NSroad_ret(:,wv_bands),1)-nsroad_r(wv_bands))*100).^2)./numel(nsroad_r(wv_bands)));
-        sqrt(sum(((mean(NSroad_ret_noadj(:,wv_bands),1)-nsroad_r(wv_bands))*100).^2)./numel(nsroad_r(wv_bands)));
-        sqrt(sum(((mean(NSroad_ret_TOA_B(:,wv_bands),1)-nsroad_r(wv_bands))*100).^2)./numel(nsroad_r(wv_bands)))];
-    title('NS Road')
-
-    # Write file of RMS Error
-    fid = fopen('RMSE_Output_No_WV.txt','w');
-    fprintf(fid,'\t #s \t #s \t #s \n #s \t #4.2f \t #4.2f \t #4.2f \n #s \t #4.2f \t #4.2f \t #4.2f \n #s \t #4.2f \t #4.2f \t #4.2f \n #s \t #4.2f \t #4.2f \t #4.2f \n #s \t #4.2f \t #4.2f \t #4.2f',...
-        'Standard','Intermediate','Enhanced',...
-        'Tarp 3#',RMSE_tarp3_no_wv(3),RMSE_tarp3_no_wv(2),RMSE_tarp3_no_wv(1),...
-        'Tarp 48#',RMSE_tarp48_no_wv(3),RMSE_tarp48_no_wv(2),RMSE_tarp48_no_wv(1),...
-        'Vegetation',RMSE_veg_no_wv(3),RMSE_veg_no_wv(2),RMSE_veg_no_wv(1),...
-        'EW Road',RMSE_EWroad_no_wv(3),RMSE_EWroad_no_wv(2),RMSE_EWroad_no_wv(1),...
-        'NS Road',RMSE_NSroad_no_wv(3),RMSE_NSroad_no_wv(2),RMSE_NSroad_no_wv(1));
-    fclose(fid);
-
-    fid = fopen('RMSE_Output.txt','w');
-    fprintf(fid,'\t #s \t #s \t #s \n #s \t #4.2f \t #4.2f \t #4.2f \n #s \t #4.2f \t #4.2f \t #4.2f \n #s \t #4.2f \t #4.2f \t #4.2f \n #s \t #4.2f \t #4.2f \t #4.2f \n #s \t #4.2f \t #4.2f \t #4.2f',...
-        'Standard','Intermediate','Enhanced',...
-        'Tarp 3#',RMSE_tarp3(3),RMSE_tarp3(2),RMSE_tarp3(1),...
-        'Tarp 48#',RMSE_tarp48(3),RMSE_tarp48(2),RMSE_tarp48(1),...
-        'Vegetation',RMSE_veg(3),RMSE_veg(2),RMSE_veg(1),...
-        'EW Road',RMSE_EWroad(3),RMSE_EWroad(2),RMSE_EWroad(1),...
-        'NS Road',RMSE_NSroad(3),RMSE_NSroad(2),RMSE_NSroad(1));
-    fclose(fid);
-
-    # Names = {'Tarp 3#';'Tarp 48#';'Vegetation';'EW Road';'NS Road'};
-    # Standard_RMSE = [RMSE_tarp3_no_wv(2);RMSE_tarp48_no_wv(2);RMSE_veg_no_wv(2);RMSE_EWroad_no_wv(2);RMSE_NSroad_no_wv(2)];
-    # Enhanced_RMSE = [RMSE_tarp3_no_wv(1);RMSE_tarp48_no_wv(1);RMSE_veg_no_wv(1);RMSE_EWroad_no_wv(1);RMSE_NSroad_no_wv(1)];
-    # T = table(Standard_RMSE,Enhanced_RMSE,'RowNames',Names);
-    # writetable(T,'RMSE_Output_No_WV.txt')
+    if __name__ == '__main__':
