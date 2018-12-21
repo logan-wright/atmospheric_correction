@@ -41,6 +41,8 @@ def load_flx(file):
     diffuse_downwelling = [rawdata[:,i] for i in np.arange(2,n,3,dtype = int)]
     upwelling = [rawdata[:,i] for i in np.arange(1,n,3,dtype = int)]
 
+    conv = 10000   # Scale Factor to convert [W cm^-2 nm^-1] to [W m^-2 nm^-2], used for .flx MODTRAN output file
+
     ret_dict = dict([('header',hdr),
                      ('altitude',altitudes),
                      ('downwelling_direct', direct_downwelling),
@@ -69,12 +71,17 @@ def load_acd(filepath):
                      ('kint',rawdata[:,2]),
                      ('kweight',rawdata[:,3]),
                      ('ts',rawdata[:,4]),
-                     ('Ts', rawdata[:,5]),
+                     ('Tso', rawdata[:,5]),
                      ('t', rawdata[:,6]),
                      ('T', rawdata[:,7]),
                      ('sph', rawdata[:,8])])
 
-    # Returns the construction dictionary
+    # Derive Ts and resolve any divide by 0, or NaN ambiguities
+    retdict['Ts'] = ret_dict['Tso']/ret_dict['T']
+    ret_dict['Ts'][np.isnan(ret_dict['Ts']) = 0
+    ret_dict['Ts'][np.isinf(ret_dict['Ts']) = 0
+
+    # Returns the constructed dictionary
     return ret_dict
 
 def load_modtran(filepath):

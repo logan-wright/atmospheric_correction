@@ -23,8 +23,6 @@ DESCRIPTION:
 
 
 '''
-
-
 import numpy as np
 import scipy.io as sio
 import matplotlib.pyplot as plt
@@ -33,7 +31,7 @@ import modtran_tools
 import load_nis
 from super_resample import super_resample
 
-def standard_correction(Lobs,L0,I0,transmittance,spherical_albedo,mu):
+def standard_correction(Lobs,L0,I0,trans,mu):
     '''
     Created by: Logan Wright
     Created On: December 20 2018
@@ -47,7 +45,11 @@ def standard_correction(Lobs,L0,I0,transmittance,spherical_albedo,mu):
     Outputs:
 
     '''
-    R = np.pi * (Lobs - L0) / (spherical_albedo * np.pi * (Lobs - L0) + mu * I0 * ( (Ts + ts) * (T + t) ) )
+
+    transmittance = super_resample(trans['Ts'] + trans['ts']) * (trans['T'] + trans['t']),trans['wvl'],Lobs['resp_func']['wvl'],Lobs['resp_func']['fwhm'])
+    spherical_albedo = super_resample(trans['sph'],trans['wvl'],Lobs['resp_func']['wvl'],Lobs['resp_func']['fwhm'])
+
+    R = np.pi * (Lobs - L0) / (spherical_albedo * np.pi * (Lobs - L0) + mu * I0 * ( transmittance ) )
     return R
 
 def irrad_correction(Lobs,L0,Ifup0,Ifdn,transmittance,spherical_albedo,mu = None):
@@ -82,7 +84,7 @@ def albedo(Lobs,Idn):
 
     '''
 
-    A = Rob * np.pi / Ifdn_obs_trim
+    A = Lobs * np.pi / Idn
     return A
 
 def adjacency_correction(Lobs,L0,Ifup0,Ifdn,Ifup,transmittance,spherical_albedo,mu = None):
@@ -156,7 +158,8 @@ def load_ASD(filepath):
 
     '''
 
-    return (wvl,R)
+    print('NOT YET IMPLEMENTED')
+    return
 
 def atmcorr(wvl,radiance,model,irrad_up = None,irrad_down = None):
     '''
@@ -205,6 +208,14 @@ def results_plot(FILL SPACE,save = False):
     Outputs:
 
     '''
+    # Set Color Tables
+    enhanced = [178,24,43]/255
+    light_enhanced = [253,219,199]/255
+    intermediate = [211,84,0]/255
+    light_intermediate = [235,152,78]/255
+    standard = [33,102,172]/255
+    light_standard = [146,197,222]/255
+
     fig = plt.figure
     ax = plt.subplot()
     plt.plot(asd_wvl,mean(tarp03,1).T/100,'k','LineWidth',1.5)
@@ -382,7 +393,6 @@ def empirical_wvl_fit():
 if __name__ == '__main__':
     # Below Cloud Surface Reflectance Retrieval
 
-    ## Section 1: Load Data and Set constants
     # Set Date
     date = '20150608'
 
@@ -442,9 +452,8 @@ if __name__ == '__main__':
     nistime = nis_datacube.nav['gps_time']
 
     # Modify NEON Instrument Response Function
-    respfunc = nis_datacube['resp_func']
-    neon_wvl0 = respfunc[:,2]+1.28
-    neon_fwhm0 = respfunc[:,3]
+    neon_wvl0 = nis_datacube['resp_func']['wvl'] + 1.28     # Add Empirically Determined Offset
+    neon_fwhm0 = nis_datacube['resp_func']['fwhm']
 
     # Set Wavelength Ranges
     # SSIR Index (25) to Neon Wvl (364) - Zenith
@@ -458,7 +467,7 @@ if __name__ == '__main__':
     # This truncates at 1000 nm (near Si/InGaAs joining)
     neon_wvl = neon_wvl_nad
     neon_fwhm = neon_fwhm_nad
-    L = len(neon_wvl0)
+    # L = len(neon_wvl0)
 
     # Load MODTRAN Irradiance
     data = np.genfromtxt('/Users/wrightad/Documents/Modtran/DATA/SUN01med2irradwnNormt.dat',dtype = float, skip_header = 2)
@@ -471,22 +480,20 @@ if __name__ == '__main__':
     I0_orig = I0
 
     #     Convolve to NEON Wavelength
-    I0 = SunEllipticFactor.*super_resample(I0[:,1],I0[:,0],neon_wvl,neon_fwhm)
-
-
+    I0 = SunEllipticFactor*super_resample(I0[:,1],I0[:,0],neon_wvl,neon_fwhm)
 
     # Load in MODTRAN Output
     baseline_acd = load_acd(filename[0]+'.acd')
 
-    t_Ts = t_Tso./t_T
-    t_Ts(np.isnan(t_Ts)) = 0
-    t_Ts(np.isinf(t_Ts)) = 0
-    T = super_resample(t_T,wvl,neon_wvl,neon_fwhm)
-    t = super_resample(t_t,wvl,neon_wvl,neon_fwhm)
-    Ts = super_resample(t_Ts,wvl,neon_wvl,neon_fwhm)
-    ts = super_resample(t_ts,wvl,neon_wvl,neon_fwhm)
-    Tso = super_resample(t_Tso,wvl,neon_wvl,neon_fwhm)
-    sph_alb = super_resample(t_sph_alb,wvl,neon_wvl,neon_fwhm)
+    # t_Ts = t_Tso./t_T
+    # t_Ts(np.isnan(t_Ts)) = 0
+    # t_Ts(np.isinf(t_Ts)) = 0
+    # T = super_resample(t_T,wvl,neon_wvl,neon_fwhm)
+    # t = super_resample(t_t,wvl,neon_wvl,neon_fwhm)
+    # Ts = super_resample(t_Ts,wvl,neon_wvl,neon_fwhm)
+    # ts = super_resample(t_ts,wvl,neon_wvl,neon_fwhm)
+    # Tso = super_resample(t_Tso,wvl,neon_wvl,neon_fwhm)
+    # sph_alb = super_resample(t_sph_alb,wvl,neon_wvl,neon_fwhm)
 
     # Load MODTRAN Irradiance
     baseline_flx = modtran_tools.load_flx(filename[0]+'.flx')
@@ -514,57 +521,57 @@ if __name__ == '__main__':
     Iup0_neon = super_resample(Iup,wvl_7sc,neon_wvl,neon_fwhm)
 
     flight_acd = modtran_tools.load_acd(filename[1] + '.acd')
-    t_Ts_1km = t_Tso_1km./t_T_1km
-    t_Ts_1km[np.isnan(t_Ts_1km)] = 0
-    t_Ts_1km[np.isinf(t_Ts_1km)] = 0
-    T_1km = super_resample(t_T_1km,wvl,neon_wvl,neon_fwhm)
-    t_1km = super_resample(t_t_1km,wvl,neon_wvl,neon_fwhm)
-    Ts_1km = super_resample(t_Ts_1km,wvl,neon_wvl,neon_fwhm)
-    ts_1km = super_resample(t_ts_1km,wvl,neon_wvl,neon_fwhm)
-    Tso_1km = super_resample(t_Tso_1km,wvl,neon_wvl,neon_fwhm)
-    sph_alb_1km = super_resample(t_sph_alb_1km,wvl,neon_wvl,neon_fwhm)
+    # t_Ts_1km = t_Tso_1km./t_T_1km
+    # t_Ts_1km[np.isnan(t_Ts_1km)] = 0
+    # t_Ts_1km[np.isinf(t_Ts_1km)] = 0
+    # T_1km = super_resample(t_T_1km,wvl,neon_wvl,neon_fwhm)
+    # t_1km = super_resample(t_t_1km,wvl,neon_wvl,neon_fwhm)
+    # Ts_1km = super_resample(t_Ts_1km,wvl,neon_wvl,neon_fwhm)
+    # ts_1km = super_resample(t_ts_1km,wvl,neon_wvl,neon_fwhm)
+    # Tso_1km = super_resample(t_Tso_1km,wvl,neon_wvl,neon_fwhm)
+    # sph_alb_1km = super_resample(t_sph_alb_1km,wvl,neon_wvl,neon_fwhm)
 
-    flight_flx = modtran_tools.load_flx(filename[1]+'.flx')
-    t_T_derived_1km = flx_data_1km.data[:,4]./flx_data_1km.data[:,34]
-    t_Ts_derived_1km = flx_data_1km.data[:,4]./flx_data_1km.data[:,-1]
-    t_T_derived = flx_data.data[:,4]./flx_data.data[:,34]
-    t_Ts_derived = flx_data.data[:,4]./flx_data.data[:,-1]
-
-    T_derived_1km = super_resample(flx_data_1km.data[:,4]./flx_data_1km.data[:,34],flx_data_1km.data[:,1],neon_wvl,neon_fwhm)
-    Ts_derived_1km = super_resample(flx_data_1km.data[:,4]./flx_data_1km.data[:,-1],flx_data_1km.data[:,1],neon_wvl,neon_fwhm)
-    T_derived = super_resample(flx_data.data[:,4]./flx_data.data[:,34],flx_data.data[:,1],neon_wvl,neon_fwhm)
-    Ts_derived = super_resample(flx_data.data[:,4]./flx_data.data[:,end],flx_data.data[:,1],neon_wvl,neon_fwhm)
-
-    flight_7sc = modtran_tools.load_7sc
+    # flight_flx = modtran_tools.load_flx(filename[1]+'.flx')
+    # t_T_derived_1km = flx_data_1km.data[:,4]./flx_data_1km.data[:,34]
+    # t_Ts_derived_1km = flx_data_1km.data[:,4]./flx_data_1km.data[:,-1]
+    # t_T_derived = flx_data.data[:,4]./flx_data.data[:,34]
+    # t_Ts_derived = flx_data.data[:,4]./flx_data.data[:,-1]
+    #
+    # T_derived_1km = super_resample(flx_data_1km.data[:,4]./flx_data_1km.data[:,34],flx_data_1km.data[:,1],neon_wvl,neon_fwhm)
+    # Ts_derived_1km = super_resample(flx_data_1km.data[:,4]./flx_data_1km.data[:,-1],flx_data_1km.data[:,1],neon_wvl,neon_fwhm)
+    # T_derived = super_resample(flx_data.data[:,4]./flx_data.data[:,34],flx_data.data[:,1],neon_wvl,neon_fwhm)
+    # Ts_derived = super_resample(flx_data.data[:,4]./flx_data.data[:,end],flx_data.data[:,1],neon_wvl,neon_fwhm)
+    #
+    # flight_7sc = modtran_tools.load_7sc
 
     # Load SSIR Data
-    sio.loadmat(SSIRfile)
-    zwvl = zwvl-2.5
-    nwvl = nwvl
+    ssim = sio.loadmat(SSIRfile)
+    zwvl = ssim['zwvl']-2.5
+    nwvl = ssim['nwvl']
 
-    ssim_zwvl = zwvl
-    ssim_zfwhm0 = np.array(((365.25, 7.67),
-                   (404.84, 8.11),
-                   (435.83, 7.25),
-                   (546.07, 7.88),
-                   (912.30, 10.86),
-                   (965.78, 15.97),
-                   (1244.30, 12.70),
-                   (1694.06, 9.75),
-                   (1791.46, 10.79),
-                   (2061.62, 17.58)))
-    ssim_zfwhm = np.zeros((439,1))
-    ssim_zfwhm[0:192] = np.interp(ssim_zfwhm0(0:5,0),ssim_zfwhm0(0:5,1),ssim_zwvl(0:192),'linear','extrap')
-    ssim_zfwhm[193:end] = np.interp(ssim_zfwhm0(5:,0),ssim_zfwhm0(5:,1),ssim_zwvl(193:),'linear','extrap')
-    ssim_nwvl = nwvl
+    # ssim_zwvl = zwvl
+    zfwhm0 = np.array(((365.25, 7.67),
+                       (404.84, 8.11),
+                       (435.83, 7.25),
+                       (546.07, 7.88),
+                       (912.30, 10.86),
+                       (965.78, 15.97),
+                       (1244.30, 12.70),
+                       (1694.06, 9.75),
+                       (1791.46, 10.79),
+                       (2061.62, 17.58)))
+    ssim['zfwhm'] = np.zeros((439,1))
+    ssim['zfwhm'][0:192] = np.interp(zfwhm0[0:5,0],zfwhm0[0:5,1],zwvl[0:192],'linear','extrap')
+    ssim['zfwhm'][192:end] = np.interp(zfwhm0[5:,0],zfwhm0[5:,1],zwvl[192:],'linear','extrap')
+    # ssim_nwvl = nwvl
     ssim_nfwhm0 = np.array(((365.25, 7.50),
-                   (404.84, 7.85),
-                   (435.83, 7.28),
-                   (546.07, 8.16),
-                   (912.30, 10.75)))
-    ssim_nfwhm = np.interp(ssim_nfwhm0(:,0),ssim_nfwhm0(:,1),ssim_nwvl,'linear','extrap')
+                            (404.84, 7.85),
+                            (435.83, 7.28),
+                            (546.07, 8.16),
+                            (912.30, 10.75)))
+    ssim_nfwhm = np.interp(nfwhm0[:,0],nfwhm0[:,1],nwvl,'linear','extrap')
 
-    ssim_wvl = ssim_zwvl(25:225)
+    ssim['wvl'] = ssim_zwvl[24:225]
 
 
 
@@ -622,23 +629,30 @@ if __name__ == '__main__':
     if date == '20150608':
         asd_wvl = asd_wvl.T
 
-    # Modelled vs Measured Irradiances
-    obs_time = np.reshape(nistime(tarp3_coord[1,0]:tarp3_coord[1,1],tarp3_coord[0,0]:tarp3_coord[0,1]),(1,-1))
-    [~,ssirtime_ind] = np.min(np.abs(ssirtime-obs_time[0]))
-    Ifdn_obs_trim = zspect[ssirtime_ind,:]
+    target_list = [dict([('name','3% Tarp'),('coord',tarp3_coord)]),
+                   dict([('name','48% Tarp'),('coord',tarp48_coord)]),
+                   dict([('name','Vegetation'),('coord',veg_coord)]),
+                   dict([('name','E-W Road'),('coord',EWroad_coord)]),
+                   dict([('name','North-South Road'),('coord',NSroad_coord)]),
 
-    # Extract Pixel/Observation Radiance Spectrum
     rad0 = super_resample(r0,wvl_7sc,neon_wvl,neon_fwhm)
-    #
-    # Ifup_TOA = flx_fup + (mu.*I0.*(Tsts_Tt).*veg_asd08)./(1-sph_alb.*veg_asd08)
-    # Ifdn_TOA_B = mu.*I0.*(ts(:,2)+Ts(:,2))+Ifup_TOA.*sph_alb
-    #
-    #     # Observation Retrieval
 
-    #
+    for target in target_list
+        obs_time = np.reshape(nistime(target['coord'][1,0]:target['coord'][1,1],target['coord'][0,0]:target['coord'][0,1]),(1,-1))
+        [~,ssirtime_ind] = np.min(np.abs(ssim['ssirtime']-obs_time[0]))
+        Ifdn_obs_trim = ssim['zspect'][ssirtime_ind,:]
+        target['spectra'] = np.reshape(data(target['coord'][1,0]:target['coord'][1,1],target['coord'][0,0]:target['coord'][0,1],:),(-1,426))
 
-    #     Ifup_obs_trim = super_resample(nspect(ssirtime_ind,:)',nwvl,neon_wvl,neon_fwhm)
-    #
+        R_stand = standard_correction(target['spectra'],r0,I0,baseline_acd,mu)
+        R_stand_adj = standard_correction()
+        R_enhan = irrad_correction()
+        R_enhan_adj = irrad_correction()
+        albedo = albedo(target['spectra'])
+
+        target['reflectance'] = dict(['Standard',R_stand),('Standard_with_adj',R_stand_adj),('Enhanced',R_enhan),('Enhanced_with_adj',R_enhan_adj),('Albedo',albedo)])
+    rad0 = super_resample(r0,wvl_7sc,neon_wvl,neon_fwhm)
+
+
 
     plt.figure()
     plt.plot(neon_wvl0,super_resample(flx_fdn/mu,flx_wvl,neon_wvl0,neon_fwhm0)*10000,'r')
@@ -649,21 +663,7 @@ if __name__ == '__main__':
 
     sio.save(date.format('%s')+'_downirradcomp.mat'),{'model_Ifdn':model_Ifdn,'obs_Ifdn':obs_Ifdn,'neon_wvl0':neon_wvl0,'zwvl':zwvl)
 
-    ## Section 2: Processing
-    # Extract Ground Spectra from NIS Scene
-    tarp3_spc = np.reshape(data(tarp3_coord[1,0]:tarp3_coord[1,1],tarp3_coord[0,0]:tarp3_coord[0,1],:),(-1,426))
-    tarp48_spc = np.reshape(data(tarp48_coord[1,0]:tarp48_coord[1,1],tarp48_coord[0,0]:tarp48_coord[0,1],:),(-1,426))
-    veg_spc = np.reshape(data(veg_coord[1,0]:veg_coord[1,1],veg_coord[0,0]:veg_coord[0,1],:),(-1,426))
-    EWroad_spc = np.reshape(data(EWroad_coord[1,0]:EWroad_coord[1,1],EWroad_coord[0,0]:EWroad_coord[0,1],:),(-1,426))
-    NSroad_spc = nnp.reshape(data(NSroad_coord[1,0]:NSroad_coord[1,1],NSroad_coord[0,0]:NSroad_coord[0,1],:),(-1,426))
 
-    # Set Color Tables
-    enhanced = [178,24,43]/255
-    light_enhanced = [253,219,199]/255
-    intermediate = [211,84,0]/255
-    light_intermediate = [235,152,78]/255
-    standard = [33,102,172]/255
-    light_standard = [146,197,222]/255
 
     # Full Resolution Calculation
     Tsts_Tt = super_resample((t_Ts + t_ts).*(t_T+t_t),wvl,neon_wvl,neon_fwhm)
@@ -676,34 +676,7 @@ if __name__ == '__main__':
     tTsot = super_resample((t_t_1km + sqrt(t_Tso_1km)) .* t_t_1km,wvl,neon_wvl,neon_fwhm)
     tTsoTso = super_resample((t_t_1km + sqrt(t_Tso_1km)) .* sqrt(t_Tso_1km),wvl,neon_wvl,neon_fwhm)
 
-    # Derived Full Resolution Calculation
-    Tsts_Tt_derived = super_resample((t_Ts_derived + super_resample(t_ts,wvl,flx_wvl,2.5)).*(t_T_derived_1km+super_resample(t_t,wvl,flx_wvl,2.5)),flx_wvl,neon_wvl,neon_fwhm)
-    # Tt2 = super_resample((t_T_1km + t_t_1km).^2,wvl,neon_wvl,neon_fwhm)
-    # t2Tso2 = super_resample(t_t_1km.^2 + 2 * t_t_1km .* sqrt(t_Tso_1km) + t_Tso_1km,wvl,neon_wvl,neon_fwhm)
-    # tTt = super_resample((t_t_1km + t_T_1km) .* t_t_1km,wvl,neon_wvl,neon_fwhm)
-    # tTT = super_resample((t_t_1km + t_T_1km) .* t_T_1km,wvl,neon_wvl,neon_fwhm)
-    # tTso2 = super_resample((t_t_1km + sqrt(t_Tso_1km)).^2,wvl,neon_wvl,neon_fwhm)
-    #
-    # tTsot = super_resample((t_t_1km + sqrt(t_Tso_1km)) .* t_t_1km,wvl,neon_wvl,neon_fwhm)
-    # tTsoTso = super_resample((t_t_1km + sqrt(t_Tso_1km)) .* sqrt(t_Tso_1km),wvl,neon_wvl,neon_fwhm)
 
-    # SSIM Full Resolutions Calculations
-    # T_1km_SSIM = super_resample(t_T_1km,wvl,ssim_wvl,ssim_zfwhm)
-    # t_1km_SSIM = super_resample(t_t_1km,wvl,ssim_wvl,ssim_zfwhm)
-    # Ts_1km_SSIM = super_resample(t_Ts_1km,wvl,ssim_wvl,ssim_zfwhm)
-    # ts_1km_SSIM = super_resample(t_ts_1km,wvl,ssim_wvl,ssim_zfwhm)
-    # Tso_1km_SSIM = super_resample(t_Tso_1km,wvl,ssim_wvl,ssim_zfwhm)
-    # sph_alb_1km_SSIM = super_resample(t_sph_alb_1km,wvl,ssim_wvl,ssim_zfwhm)
-    #
-    # Tsts_Tt_SSIM = super_resample((t_Ts + t_ts).*(t_T+t_t),wvl,ssim_wvl,ssim_zfwhm)
-    # Tt2_SSIM = super_resample((t_T_1km + t_t_1km).^2,wvl,ssim_wvl,ssim_zfwhm)
-    # t2Tso2_SSIM = super_resample(t_t_1km.^2 + 2 * t_t_1km .* sqrt(t_Tso_1km) + t_Tso_1km,wvl,ssim_wvl,ssim_zfwhm)
-    # tTt_SSIM = super_resample((t_t_1km + t_T_1km) .* t_t_1km,wvl,ssim_wvl,ssim_zfwhm)
-    # tTT_SSIM = super_resample((t_t_1km + t_T_1km) .* t_T_1km,wvl,ssim_wvl,ssim_zfwhm)
-    # tTso2_SSIM = super_resample((t_t_1km + sqrt(t_Tso_1km)).^2,wvl,ssim_wvl,ssim_zfwhm)
-    #
-    # tTsot_SSIM = super_resample((t_t_1km + sqrt(t_Tso_1km)) .* t_t_1km,wvl,ssim_wvl,ssim_zfwhm)
-    # tTsoTso_SSIM = super_resample((t_t_1km + sqrt(t_Tso_1km)) .* sqrt(t_Tso_1km),wvl,ssim_wvl,ssim_zfwhm)
 
     ## Retrieve Surface Reflectance
     ##### 3# Tarp #############################################################
