@@ -77,12 +77,13 @@ def load_nis(file):
 
     # Double check to make sure all values are in range, set any out of range
     #   values to the range limits
-    rgb[np.greater(rgb,1)] = 1
-    rgb[np.less(rgb,0)] = 0
+    rgb[rgb > 1] = 1
+    rgb[rgb < 0] = 0
 
     # Return
     ret_val = datacube(scaled_data,resp,nav,flags,rgb)
     return ret_val
 
 if __name__ == '__main__':
-    out = load_nis('/Users/wrightad/Documents/Data/NEON/Flight_ROIs/20150608/NIS01_20150608_165842_rad')
+    import os.path
+    out = load_nis(os.path.abspath('../ATMO_CORR_Code/NIS01_20150608_165842_rdn'))

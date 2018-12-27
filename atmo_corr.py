@@ -26,12 +26,13 @@ DESCRIPTION:
 import numpy as np
 import scipy.io as sio
 import matplotlib.pyplot as plt
+import os.path
 
 import modtran_tools
 from load_nis import load_nis
 from super_resample import super_resample
 
-def standard_correction(Lobs,L0,I0,trans,mu):
+def standard_correction(obs,L0,I0,trans,mu):
     '''
     Created by: Logan Wright
     Created On: December 20 2018
@@ -46,10 +47,16 @@ def standard_correction(Lobs,L0,I0,trans,mu):
 
     '''
 
-    transmittance = super_resample((trans['Ts'] + trans['ts']) * (trans['T'] + trans['t']),trans['wvl'], Lobs['resp_func']['wvl'], Lobs['resp_func']['fwhm'])
-    spherical_albedo = super_resample(trans['sph'],trans['wvl'], Lobs['resp_func']['wvl'], Lobs['resp_func']['fwhm'])
+    transmittance = super_resample((trans['Ts'] + trans['ts']) * (trans['T'] + trans['t']),trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+    spherical_albedo = super_resample(trans['sph'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
 
-    R = np.pi * (Lobs - L0) / (spherical_albedo * np.pi * (Lobs - L0) + mu * I0 * ( transmittance ) )
+    n_spectra =obs['spectra'].shape
+    n_wvl = obs['resp_func']['wvl'].shape
+    R = np.zeros((n_spectra[0],n_wvl))
+
+    for n in range(n_spectra[0]):
+        spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+        R[n,:] = np.pi * (spectrum - L0) / (spherical_albedo * np.pi * (spectrum - L0) + mu * I0 * ( transmittance ) )
     return R
 
 def irrad_correction(Lobs,L0,Ifup0,Ifdn,transmittance,spherical_albedo,mu = None):
@@ -183,7 +190,7 @@ def atmcorr(wvl,radiance,model,irrad_up = None,irrad_down = None):
 #            pi * (rho_bar_ret / (1 - rho_bar_ret * sph_alb_1km))) * ...
 #            (pi / (Ifdn_obs_trim * (t_1km + sqrt(Tso_1km)) * sqrt(Tso_1km))) * (1 - rho_bar_ret * sph_alb_1km)
 
-def results_plot(FILL_SPACE,save = False):
+def results_plot(*args,save = False):
     '''
     Created by: Logan Wright
     Created On: December 20 2018
@@ -197,29 +204,31 @@ def results_plot(FILL_SPACE,save = False):
     Outputs:
 
     '''
-    # Set Color Tables
-    enhanced = [178,24,43]/255
-    light_enhanced = [253,219,199]/255
-    intermediate = [211,84,0]/255
-    light_intermediate = [235,152,78]/255
-    standard = [33,102,172]/255
-    light_standard = [146,197,222]/255
+    
+    fig1 = plt.figure(figsize = (4,4))
+    ax1 = plt.subplot()
+    ax1.xlabel('Wavelength [nm]','FontSize',12)
+    ax1.ylabel('Reflectance','FontSize',12)
+    ax1.axis([350,1025,0,0.1])
+    
+#    fig2 = plt.figure(figsize = (4,4))
+#    ax2 = plt.subplot()
+#    ax2.xlabel('Wavelength [nm]','FontSize',12)
+#    ax2.axis([350,1025,0,0.1])
+    
+    for arg in args:
+        ax1.plot(arg['wvl'],np.mean(arg['spectra'],axis = 1),color = arg['color'],LineWidth = 1.5)
 
-    fig = plt.figure(figsize = (4,4))
-    ax = plt.subplot()
-    plt.plot(asd_wvl,mean(tarp03,1).T/100,'k','LineWidth',1.5)
-    plt.plot(neon_wvl,mean(flight_alb,1),'Color',[153,163,164]/255,'LineWidth',1.5)
-    plt.plot(neon_wvl,mean(tarp3_ret_TOA_B,1),'-','Color',standard,'LineWidth',1.5)
-    plt.plot(neon_wvl,mean(tarp3_ret_noadj,1),'Color',intermediate,'LineWidth',1.5) # Intermediate
-    plt.plot(neon_wvl,mean(tarp3_ret,1),'Color',enhanced,'LineWidth',1.5)
-    plt.ylabel('Reflectance','FontSize',12)
-    plt.xlabel('Wavelength [nm]','FontSize',12)
-    plt.axis([350,1025,0,0.1])
+
 
     if save == True:
-        for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
+        for item in ([ax1.title, ax1.xaxis.label, ax1.yaxis.label] + ax1.get_xticklabels() + ax1.get_yticklabels()):
             item.set_fontsize(20)
-        plt.savefig(NAME + '.eps',dpi = 300, format = 'eps')
+        fig1.savefig(NAME + '.eps',dpi = 300, format = 'eps')
+        
+#        for item in ([ax2.title, ax2.xaxis.label, ax2.yaxis.label] + ax2.get_xticklabels() + ax2.get_yticklabels()):
+#            item.set_fontsize(20)
+#        fig2.savefig(NAME + '.eps',dpi = 300, format = 'eps')
 
 def calc_rmse(RMSE_noWV,RMSE,Retrievals = ('Standard', 'Standard with Adj Correction', 'Enhanced', 'Enhanced with Adj Correction')):
     '''
@@ -388,49 +397,49 @@ if __name__ == '__main__':
 
     # This section includes filenames and constants for each day/flight line
     if date == '20150608':
-        NISfile = '/Users/wrightad/Documents/Data/NEON/Flight_ROIs/20150608/NIS01_20150608_165842_rdn'
+        NISfile = os.path.abspath('../ATMO_CORR_Code/NIS01_20150608_165842_rdn')
         tarp3_coord = np.array(((304,307),(364,369)))
         tarp48_coord = np.array(((313,319),(365,370)))
         veg_coord = np.array(((324,328),(380,420)))
         EWroad_coord = np.array(((310,348),(354,356)))
         NSroad_coord = np.array(((334,336),(317,354)))
-        filename = ['/Users/wrightad/Documents/Modtran/NEON_ATMCORR/NEON_20150608_Baseline',
-            '/Users/wrightad/Documents/Modtran/NEON_ATMCORR/NEON_20150608_1kmAtmo_40H2O']
+        filename = [os.path.abspath('../ATMO_CORR_Code/NEON_20150608_Baseline'),
+            os.path.abspath('../ATMO_CORR_Code/NEON_20150608_1kmAtmo_40H2O')]
         SunEllipticFactor = 0.97083    # Determined by Day of Year
         mu = np.cos(np.deg2rad(31))                 # Determined by Time of Day
     #     SSIRfile = '/Users/wrightad/Documents/Data/NEON/FlightData/20150608_SSIR.mat'
     #     SSIRfile = '/Users/wrightad/Documents/Data/NEON/FlightData/20150608_SSIR_CALIB_0602.mat'
-        SSIRfile = '/Users/wrightad/Documents/Data/NEON/FlightData/20150608_SSIR_CALIBSPECT_Jul2017.mat'
-        asdfile = '/Users/wrightad/Documents/Data/NEON/GroundData/ASD_Refl/20150608_ASD_REFL.mat'
+        SSIRfile = os.path.abspath('../ATMO_CORR_Code/20150608_SSIR_CALIBSPECT_Jul2017.mat')
+        asdfile = os.path.abspath('../ATMO_CORR_Code/20150608_ASD_REFL.mat')
 
     elif date == '20150616':
-        NISfile = '/Users/wrightad/Documents/Data/NEON/Flight_ROIs/20150616/NIS01_20150616_151613_rdn'
+        NISfile = os.path.abspath('../ATMO_CORR_Code/NIS01_20150616_151613_rdn')
         tarp3_coord = np.array(((140,145),(232,237)))
         tarp48_coord = np.array(((150,155)(232,237)))
         veg_coord = np.array(((155,160),(253,280)))
         EWroad_coord = np.array(((148,185),(220,224)))
         NSroad_coord = np.array(((168,172),(182,218)))
-        filename = ('/Users/wrightad/Documents/Modtran/NEON_ATMCORR/NEON_20150616_Baseline',
-            '/Users/wrightad/Documents/Modtran/NEON_ATMCORR/NEON_20150616_259mAtmo_30H2O')
+        filename = (os.path.abspath('../ATMO_CORR_Code/NEON_20150616_Baseline'),
+            os.path.abspath('../ATMO_CORR_Code/NEON_20150616_259mAtmo_30H2O'))
         SunEllipticFactor = 0.96950    # Determined by Day of Year
         mu = np.cos(np.deg2rad(50.2))             # Determined by Time of Day
-        SSIRfile = '/Users/wrightad/Documents/Data/NEON/FlightData/20150616_SSIR_CALIBSPECT_20150616FIELDB.mat'
-        asdfile = '/Users/wrightad/Documents/Data/NEON/GroundData/ASD_Refl/20150616_ASD_REFL.mat'
+        SSIRfile = os.path.abspath('../ATMO_CORR_Code/20150616_SSIR_CALIBSPECT_20150616FIELDB.mat')
+        asdfile = os.path.abspath('../ATMO_CORR_Code/20150616_ASD_REFL.mat')
     #     asdfile = '/Users/wrightad/Documents/Data/NEON/GroundData/ASD_Refl/20150608_ASD_REFL.mat'
 
     elif date == '20150617':
-        NISfile = '/Users/wrightad/Documents/Data/NEON/Flight_ROIs/20150617/NIS01_20150617_203142_rdn'
+        NISfile = os.path.abspath('../ATMO_CORR_Code/NIS01_20150617_203142_rdn')
         tarp3_coord = np.array(((174,180),(200,205)))
         tarp48_coord = np.array(((183,190),(200,207)))
         veg_coord = np.array(((196,199),(220,245)))
         EWroad_coord = np.array(((173,226),(190,192)))
         NSroad_coord = np.array(((208,211),(159,190)))
-        filename = ('/Users/wrightad/Documents/Modtran/NEON_ATMCORR/NEON_20150617_Baseline',
-            '/Users/wrightad/Documents/Modtran/NEON_ATMCORR/NEON_20150617_1kmAtmo_40H2O')
+        filename = (os.path.abspath('../ATMO_CORR_Code/NEON_20150617_Baseline'),
+            os.path.abspath('../ATMO_CORR_Code/NEON_20150617_1kmAtmo_40H2O'))
         SunEllipticFactor = 0.96933    # Determined by Day of Year
         mu = np.cos(np.deg2rad(25.0))                # Determined by Time of Day
-        SSIRfile = '/Users/wrightad/Documents/Data/NEON/FlightData/20150617_SSIR.mat'
-        asdfile = '/Users/wrightad/Documents/Data/NEON/GroundData/ASD_Refl/20150617_ASD_REFL.mat'
+        SSIRfile = os.path.abspath('../ATMO_CORR_Code/20150617_SSIR.mat')
+        asdfile = os.path.abspath('../ATMO_CORR_Code/20150617_ASD_REFL.mat')
 
     N = len(filename)
 
@@ -460,7 +469,7 @@ if __name__ == '__main__':
     # L = len(neon_wvl0)
 
     # Load MODTRAN Irradiance
-    data = np.genfromtxt('/Users/wrightad/Documents/Modtran/DATA/SUN01med2irradwnNormt.dat',dtype = float, skip_header = 2)
+    data = np.genfromtxt(os.path.abspath('../ATMO_CORR_Code/SUN01med2irradwnNormt.dat'),dtype = float, skip_header = 2)
     data = data[1:,:]
     #     Convert to wavelength increments
     data[:,0] = 1e7/data[:,0]
@@ -567,7 +576,7 @@ if __name__ == '__main__':
 
 
     # Load Ground Reflectances
-    asd_20150617 = sio.loadmat('/Users/wrightad/Documents/Data/NEON/GroundData/ASD_Refl/20150617_ASD_REFL.mat')
+    asd_20150617 = sio.loadmat(os.path.abspath('../ATMO_CORR_Code/20150617_ASD_REFL.mat'))
     # Average Ground Reflectance Spectra
     tarp3_asd17 = super_resample(np.mean(asd_20150617['tarp03'],axis = 0),np.squeeze(asd_20150617['asd_wvl']),neon_wvl,neon_fwhm)/100
     tarp48_asd17 = super_resample(np.mean(asd_20150617['tarp48'],axis = 0),np.squeeze(asd_20150617['asd_wvl']),neon_wvl,neon_fwhm)/100
@@ -575,7 +584,7 @@ if __name__ == '__main__':
     ewroad_asd17 = super_resample(np.mean(asd_20150617['ewroad'],axis = 0),np.squeeze(asd_20150617['asd_wvl']),neon_wvl,neon_fwhm)/100
     nsroad_asd17 = super_resample(np.mean(asd_20150617['nsroad'],axis = 0),np.squeeze(asd_20150617['asd_wvl']),neon_wvl,neon_fwhm)/100
 
-    asd_20150616 = sio.loadmat('/Users/wrightad/Documents/Data/NEON/GroundData/ASD_Refl/20150616_ASD_REFL.mat')
+    asd_20150616 = sio.loadmat(os.path.abspath('../ATMO_CORR_Code/20150616_ASD_REFL.mat'))
     # Average Ground Reflectance Spectra
     tarp3_asd16 = super_resample(np.mean(asd_20150616['tarp03'],axis = 0),np.squeeze(asd_20150616['asd_wvl']),neon_wvl,neon_fwhm)/100
     tarp48_asd16 = super_resample(np.mean(asd_20150616['tarp48'],axis = 0),np.squeeze(asd_20150616['asd_wvl']),neon_wvl,neon_fwhm)/100
@@ -584,7 +593,7 @@ if __name__ == '__main__':
     nsroad_asd16 = super_resample(np.mean(asd_20150616['nsroad'],axis = 0),np.squeeze(asd_20150616['asd_wvl']),neon_wvl,neon_fwhm)/100
 
 
-    asd_20150608 = sio.loadmat('/Users/wrightad/Documents/Data/NEON/GroundData/ASD_Refl/20150608_ASD_REFL.mat')
+    asd_20150608 = sio.loadmat(os.path.abspath('../ATMO_CORR_Code/20150608_ASD_REFL.mat'))
     # Average Ground Reflectance Spectra
     tarp3_asd08 = super_resample(np.mean(asd_20150608['tarp03'],axis = 0),np.squeeze(asd_20150608['asd_wvl']),neon_wvl,neon_fwhm)/100
     tarp48_asd08 = super_resample(np.mean(asd_20150608['tarp48'],axis = 0),np.squeeze(asd_20150608['asd_wvl']),neon_wvl,neon_fwhm)/100
@@ -605,14 +614,14 @@ if __name__ == '__main__':
 
     plt.subplot(2,2,3)
     plt.plot(neon_wvl,veg_asd17,color = [34/255,139/255,34/255],linestyle = '--')
-    plt.plot(neon_wvl,veg_asd16,color = [34,139,34]/255,linestyle = ':')
-    plt.plot(neon_wvl,veg_asd08,color = [34,139,34]/255)
+    plt.plot(neon_wvl,veg_asd16,color = [34/255,139/255,34/255],linestyle = ':')
+    plt.plot(neon_wvl,veg_asd08,color = [34/255,139/255,34/255])
 
     plt.subplot(2,2,4)
-    plt.plot(neon_wvl,ewroad_asd17,color = [156,102,31]/255,linestyle = '--')
-    plt.plot(neon_wvl,ewroad_asd16,color = [156,102,31]/255,linestyle = ':')
-    plt.plot(neon_wvl,ewroad_asd08,color = [156,102,31]/255)
-    plt.legend('Jun 17','Jun 16','Jun 8')
+    plt.plot(neon_wvl,ewroad_asd17,color = [156/255,102/255,31/255],linestyle = '--')
+    plt.plot(neon_wvl,ewroad_asd16,color = [156/255,102/255,31/255],linestyle = ':')
+    plt.plot(neon_wvl,ewroad_asd08,color = [156/255,102/255,31/255])
+    plt.legend(['Jun 17','Jun 16','Jun 8'])
 
     asdtemp = sio.loadmat(asdfile)
     asd_wvl = asdtemp['asd_wvl']
@@ -620,11 +629,24 @@ if __name__ == '__main__':
     if date == '20150608':
         asd_wvl = asd_wvl.T
 
+    # Set Color Tables
+    enhanced = [178/255,24/255,43/255]
+    light_enhanced = [253/255,219/255,199/255]
+    intermediate = [211/255,84/255,0/255]
+    light_intermediate = [235/255,152/255,78/255]
+    standard = [33/255,102/255,172/255]
+    light_standard = [146/255,197/255,222/255]
+    
+    standard_adj = [152/255,78/255,163/255]
+    
+    albedo_color = [153/255,163/255,164/255]
+    asd_color = 'k'
+
     target_list = [dict([('name','3% Tarp'),('coord',tarp3_coord)]),
                    dict([('name','48% Tarp'),('coord',tarp48_coord)]),
                    dict([('name','Vegetation'),('coord',veg_coord)]),
                    dict([('name','E-W Road'),('coord',EWroad_coord)]),
-                   dict([('name','North-South Road'),('coord',NSroad_coord)])],
+                   dict([('name','North-South Road'),('coord',NSroad_coord)])]
 
     rad0 = super_resample(r0,wvl_7sc,neon_wvl,neon_fwhm)
 
@@ -633,18 +655,22 @@ if __name__ == '__main__':
         ssirtime_ind = np.argmin(np.abs(ssim['ssirtime']-obs_time[0]))
         Ifdn_obs_trim = ssim['zspect'][ssirtime_ind,:]
         target['spectra'] = np.reshape(nis_datacube.data_cube[target['coord'][1,0]:target['coord'][1,1],target['coord'][0,0]:target['coord'][0,1],:],(-1,426))
+        target['resp_func'] = dict([('wvl',neon_wvl),('fwhm',neon_fwhm),('wvl0',neon_wvl0)])
 
-        R_stand = standard_correction(target['spectra'],r0,I0,baseline_acd,mu)
+        R_stand = standard_correction(target,rad0,I0,baseline_acd,mu)
+        results_stand = dict([('spectra',R_stand),('wvl',neon_wvl),('color',standard)])
         R_stand_adj = standard_correction()
+        R_stand_adj = dict([('spectra',R_stand_adj),('wvl',neon_wvl),('color',standard_adj)])
         R_enhan = irrad_correction()
+        R_enhan = dict([('spectra',R_enhan),('wvl',neon_wvl),('color',intermediate)])
         R_enhan_adj = irrad_correction()
+        R_enhan_adj = dict([('spectra',R_enhan_adj),('wvl',neon_wvl),('color',enhan)])
         albedo = albedo(target['spectra'])
+        R_albedo = dict([('spectra',albedo),('wvl',neon_wvl),('color',albedo_color)])
 
-        target['reflectance'] = dict([('Standard',R_stand),('Standard_with_adj',R_stand_adj),('Enhanced',R_enhan),('Enhanced_with_adj',R_enhan_adj),('Albedo',albedo)])
-    
-    rad0 = super_resample(r0,wvl_7sc,neon_wvl,neon_fwhm)
+        asd = dict([('spectra',target['ref']),('wvl',asd_wvl),('color',asd_color)])
 
-
+    plot_results(asd,R_albedo,R_stand, R_stand_adj, R_enhan, R_enhan_adj, title = target['name'], save = True)
 
     plt.figure()
     plt.plot(neon_wvl0,super_resample(baseline_flx['downwelling'][flight_ind]/mu,baseline_flx['wvl'],neon_wvl0,neon_fwhm0)*10000,'r')
