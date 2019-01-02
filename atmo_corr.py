@@ -52,14 +52,15 @@ def standard_correction(obs,L0,I0,trans,mu):
 
     n_spectra =obs['spectra'].shape
     n_wvl = obs['resp_func']['wvl'].shape
-    R = np.zeros((n_spectra[0],n_wvl))
+    R = np.zeros((n_spectra[0],n_wvl[0]))
 
     for n in range(n_spectra[0]):
         spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         R[n,:] = np.pi * (spectrum - L0) / (spherical_albedo * np.pi * (spectrum - L0) + mu * I0 * ( transmittance ) )
+
     return R
 
-def irrad_correction(Lobs,L0,Ifup0,Ifdn,transmittance,spherical_albedo,mu = None):
+def irrad_correction(obs,L0,I0,trans,mu = None):
     '''
     Created by: Logan Wright
     Created On: December 20 2018
@@ -73,7 +74,23 @@ def irrad_correction(Lobs,L0,Ifup0,Ifdn,transmittance,spherical_albedo,mu = None
     Outputs:
 
     '''
-    R = np.pi * (Lobs - L0) / (spherical_albedo * np.pi * (Lobs - L0) + Ifdn * (T + t)**2)
+
+    transmittance = super_resample((trans['Ts'] + trans['ts']) * (trans['T'] + trans['t']),trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+    spherical_albedo = super_resample(trans['sph'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+
+    n_spectra =obs['spectra'].shape
+    n_wvl = obs['resp_func']['wvl'].shape
+    R = np.zeros((n_spectra[0],n_wvl[0]))
+    if mu is not None:
+        for n in range(n_spectra[0]):
+            # NEEDS TO BE ADJUSTED
+            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+            R[n,:] = np.pi * (spectrum - L0) / (spherical_albedo * np.pi * (spectrum - L0) + If_dn * ( transmittance ) )
+    else:
+        for n in range(n_spectra[0]):
+            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+            R[n,:] = np.pi * (spectrum - L0) / (spherical_albedo * np.pi * (spectrum - L0) + If_dn * ( transmittance ) )
+
     return R
 
 def albedo(Lobs,Idn):
@@ -204,18 +221,18 @@ def results_plot(*args,save = False):
     Outputs:
 
     '''
-    
+
     fig1 = plt.figure(figsize = (4,4))
     ax1 = plt.subplot()
     ax1.xlabel('Wavelength [nm]','FontSize',12)
     ax1.ylabel('Reflectance','FontSize',12)
     ax1.axis([350,1025,0,0.1])
-    
+
 #    fig2 = plt.figure(figsize = (4,4))
 #    ax2 = plt.subplot()
 #    ax2.xlabel('Wavelength [nm]','FontSize',12)
 #    ax2.axis([350,1025,0,0.1])
-    
+
     for arg in args:
         ax1.plot(arg['wvl'],np.mean(arg['spectra'],axis = 1),color = arg['color'],LineWidth = 1.5)
 
@@ -225,7 +242,7 @@ def results_plot(*args,save = False):
         for item in ([ax1.title, ax1.xaxis.label, ax1.yaxis.label] + ax1.get_xticklabels() + ax1.get_yticklabels()):
             item.set_fontsize(20)
         fig1.savefig(NAME + '.eps',dpi = 300, format = 'eps')
-        
+
 #        for item in ([ax2.title, ax2.xaxis.label, ax2.yaxis.label] + ax2.get_xticklabels() + ax2.get_yticklabels()):
 #            item.set_fontsize(20)
 #        fig2.savefig(NAME + '.eps',dpi = 300, format = 'eps')
@@ -506,7 +523,7 @@ if __name__ == '__main__':
     baseline_7sc = modtran_tools.load_7sc(filename[0]+'.7sc')
     wvl_7sc = baseline_7sc['wvl']
     r0 = baseline_7sc['path_radiance']
-    Iup = baseline_7sc['path_irradiance']
+    Iup0 = baseline_7sc['path_irradiance']
 
     r0 = r0/100
 
@@ -514,11 +531,12 @@ if __name__ == '__main__':
     # Iup = Iup[0,:]
 
     # Calculate Atmospheric Reflectance
+
     rho_a_I = baseline_flx['upwelling'][flight_ind]/(baseline_flx['downwelling'][flight_ind])
     rho_a_R = np.flipud(r0)/(1e4*baseline_flx['downwelling'][flight_ind])
 
-    rad0 = super_resample(r0,wvl_7sc,neon_wvl,neon_fwhm)
-    Iup0_neon = super_resample(Iup,wvl_7sc,neon_wvl,neon_fwhm)
+    rad0_neon = super_resample(r0,wvl_7sc,neon_wvl,neon_fwhm)
+    Iup0_neon = super_resample(Iup0,wvl_7sc,neon_wvl,neon_fwhm)
 
     flight_acd = modtran_tools.load_acd(filename[1] + '.acd')
     # t_Ts_1km = t_Tso_1km/t_T_1km
@@ -636,9 +654,9 @@ if __name__ == '__main__':
     light_intermediate = [235/255,152/255,78/255]
     standard = [33/255,102/255,172/255]
     light_standard = [146/255,197/255,222/255]
-    
+
     standard_adj = [152/255,78/255,163/255]
-    
+
     albedo_color = [153/255,163/255,164/255]
     asd_color = 'k'
 
@@ -648,23 +666,32 @@ if __name__ == '__main__':
                    dict([('name','E-W Road'),('coord',EWroad_coord)]),
                    dict([('name','North-South Road'),('coord',NSroad_coord)])]
 
-    rad0 = super_resample(r0,wvl_7sc,neon_wvl,neon_fwhm)
+    # rad0 = super_resample(r0,wvl_7sc,neon_wvl,neon_fwhm)
+    # Ifup0 = super_resample(rho_a_I*Ifdn_obs_trim_NIS_SSIM,flx_wvl,neon_wvl2[:,x],neon_fwhm)*Ifdn_obs_trim
 
     for target in target_list:
         obs_time = np.reshape(nistime[target['coord'][1,0]:target['coord'][1,1],target['coord'][0,0]:target['coord'][0,1]],(1,-1))
         ssirtime_ind = np.argmin(np.abs(ssim['ssirtime']-obs_time[0]))
-        Ifdn_obs_trim = ssim['zspect'][ssirtime_ind,:]
+        Ifdn_obs = dict([('wvl',ssim['zwvl']),('If_dn',ssim['zspect'][ssirtime_ind,:])])
+        If_up = dict([('wvl',ssim['nwvl']),('If_up',ssim['nspect'][ssirtime_ind,:])])
         target['spectra'] = np.reshape(nis_datacube.data_cube[target['coord'][1,0]:target['coord'][1,1],target['coord'][0,0]:target['coord'][0,1],:],(-1,426))
         target['resp_func'] = dict([('wvl',neon_wvl),('fwhm',neon_fwhm),('wvl0',neon_wvl0)])
 
-        R_stand = standard_correction(target,rad0,I0,baseline_acd,mu)
-        results_stand = dict([('spectra',R_stand),('wvl',neon_wvl),('color',standard)])
-        R_stand_adj = standard_correction()
+        # Standard Atmospheric Correction using Whole Atmosphere MODTRAN
+        R_stand = standard_correction(target,rad0_neon,I0,baseline_acd,mu = mu)
+        R_stand = dict([('spectra',R_stand),('wvl',neon_wvl),('color',standard)])
+        # Whole Atmosphere MODTRAN with adjacency correction using Upwelling Irradiance
+        R_stand_adj = adjacency_correction(target,rad0_neon,I0,baseline_acd,mu = mu,adjacency = If_up)
         R_stand_adj = dict([('spectra',R_stand_adj),('wvl',neon_wvl),('color',standard_adj)])
-        R_enhan = irrad_correction()
+
+        # Enhanced Atmospheric Correction using Downwelling Irradiance
+        path_reflectances = dict([('wvl',wvl_7sc),('rad_path_refl',rho_a_R),('irrad_path_refl',rho_a_I)])
+        R_enhan = standard_correction(target,If_dn,path_reflectances,flight_acd)
         R_enhan = dict([('spectra',R_enhan),('wvl',neon_wvl),('color',intermediate)])
-        R_enhan_adj = irrad_correction()
+        # Enhanced Atmospheric Correction Using Up- and Downwelling Irradiances
+        R_enhan_adj = adjacency_correction(target,If_dn,path_reflectances,flight_acd,adjacency = If_up)
         R_enhan_adj = dict([('spectra',R_enhan_adj),('wvl',neon_wvl),('color',enhan)])
+
         albedo = albedo(target['spectra'])
         R_albedo = dict([('spectra',albedo),('wvl',neon_wvl),('color',albedo_color)])
 
