@@ -1,4 +1,4 @@
-import numpy as N
+import numpy as np
 
 def gauss_conv(in_spec,in_wvl,center,fwhm):
     """
@@ -26,11 +26,11 @@ def gauss_conv(in_spec,in_wvl,center,fwhm):
     Outputs:
         out = value of the new spectrum at this center wavelength
     """
-    gaus = N.zeros(len(in_spec));
-    gaus = N.exp((-4 * N.log(2) * ((in_wvl-center) / fwhm) ** 2))
+    gaus = np.zeros(len(in_spec));
+    gaus = np.exp((-4 * np.log(2) * ((in_wvl-center) / fwhm) ** 2))
 
     totinwvl = len(in_wvl)
-    diff = N.zeros(totinwvl)
+    diff = np.zeros(totinwvl)
     diff[1:totinwvl-1] = (in_wvl[2:totinwvl]-in_wvl[0:totinwvl-2])/2
     diff[0] = (in_wvl[1]-in_wvl[0])
     diff[totinwvl-1] = (in_wvl[totinwvl-1]-in_wvl[totinwvl-2])
@@ -69,9 +69,15 @@ def super_resample(in_spec,in_wvl,out_wvl,out_fwhm):
             - format: numpy array, dtype = float
             - dimensions: [newwvl,1] or [1,newwvl]
     """
-
+    
+    # Remove any stray singleton dimensions
+    in_spec = np.squeeze(in_spec)
+    in_wvl = np.squeeze(in_wvl)
+    out_wvl = np.squeeze(out_wvl)
+    out_fwhm = np.squeeze(out_fwhm)
+    
     n = len(out_wvl);
-    out_spec = N.zeros(n)
+    out_spec = np.zeros(n)
 #    bp = N.zeros(n,len(in_spec))
     if len(out_fwhm) == 1:
         for i in range(n):

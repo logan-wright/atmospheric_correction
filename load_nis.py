@@ -45,10 +45,10 @@ def load_nis(file):
 
     # Load NIS Metadata
     # Load metadata
-    img = spectral.io.envi.open(file + '.hdr',file)
+    img = spectral.io.envi.open(file + '_obs_ort.hdr',file + '_obs_ort')
     metadata = img.load()
-    nav = dict([('gps_time',metadata[:,:,10])])
-    # data[data == -9999] = np.NaN
+    nav = dict([('gps_time',np.squeeze(metadata[:,:,9]))])
+    nav['gps_time'][nav['gps_time'] == -9999] = np.NaN
 
     # Produce and RGB "Quasi-truecolor" preview image
     # Apply 2% Linear Stretch to "True Color"
