@@ -256,7 +256,7 @@ def plot_results(*args, title = 'Reflectances', save = False):
     '''
 
     fig1 = plt.figure(figsize = (4,4))
-    plt.title(title)
+#    plt.title(title)
     ax1 = plt.subplot()
     plt.xlabel('Wavelength [nm]',fontsize = 12)
     plt.ylabel('Reflectance',fontsize = 12)
@@ -267,15 +267,19 @@ def plot_results(*args, title = 'Reflectances', save = False):
 #    ax2.xlabel('Wavelength [nm]','FontSize',12)
 #    ax2.axis([350,1025,0,0.1])
 
+
     for arg in args:
-        ax1.plot(arg['wvl'],np.mean(arg['spectra'],axis = 1),color = arg['color'],LineWidth = 1.5)
+        if np.size(arg['spectra'].shape) == 2:
+            arg['spectra'] = np.mean(arg['spectra'],axis = 0)
+        # Else Do Nothing
+        ax1.plot(arg['wvl'],arg['spectra'],color = arg['color'],LineWidth = 1.5)
 
 
 
     if save == True:
         for item in ([ax1.title, ax1.xaxis.label, ax1.yaxis.label] + ax1.get_xticklabels() + ax1.get_yticklabels()):
             item.set_fontsize(20)
-        fig1.savefig(NAME + '.eps',dpi = 300, format = 'eps')
+        fig1.savefig( title + '.eps',dpi = 300, format = 'eps')
 
 #        for item in ([ax2.title, ax2.xaxis.label, ax2.yaxis.label] + ax2.get_xticklabels() + ax2.get_yticklabels()):
 #            item.set_fontsize(20)
@@ -680,8 +684,8 @@ if __name__ == '__main__':
     asdtemp = sio.loadmat(asdfile)
     asd_wvl = asdtemp['asd_wvl']
     # asd_wvl = asd_wvl'
-    if date == '20150608':
-        asd_wvl = asd_wvl.T
+#    if date == '20150608':
+#        asd_wvl = asd_wvl.T
 
     # Set Color Tables
     enhanced = [178/255,24/255,43/255]
@@ -696,11 +700,16 @@ if __name__ == '__main__':
     albedo_color = [153/255,163/255,164/255]
     asd_color = 'k'
 
-    target_list = [dict([('name','3% Tarp'),('coord',tarp3_coord),('ref',np.mean(asdtemp['tarp03'],axis = 0))]),
-                   dict([('name','48% Tarp'),('coord',tarp48_coord),('ref',np.mean(asdtemp['tarp48'],axis = 0))]),
-                   dict([('name','Vegetation'),('coord',veg_coord),('ref',np.mean(asdtemp['veg'],axis = 0))]),
-                   dict([('name','E-W Road'),('coord',EWroad_coord),('ref',np.mean(asdtemp['ewroad'],axis = 0))]),
-                   dict([('name','North-South Road'),('coord',NSroad_coord),('ref',np.mean(asdtemp['nsroad'],axis = 0))])]
+    target_list = [dict([('name','3% Tarp'),('coord',tarp3_coord),
+                         ('fname',date+'_tarp03'),('ref',np.mean(asdtemp['tarp03'],axis = 0))]),
+                   dict([('name','48% Tarp'),('coord',tarp48_coord),
+                         ('fname',date+'_tarp48'),('ref',np.mean(asdtemp['tarp48'],axis = 0))]),
+                   dict([('name','Vegetation'),('coord',veg_coord),
+                         ('fname',date+'_veg'),('ref',np.mean(asdtemp['veg'],axis = 0))]),
+                   dict([('name','E-W Road'),('coord',EWroad_coord),
+                         ('fname',date+'_ewroad'),('ref',np.mean(asdtemp['ewroad'],axis = 0))]),
+                   dict([('name','North-South Road'),('coord',NSroad_coord),
+                         ('fname',date+'_nsroad'),('ref',np.mean(asdtemp['nsroad'],axis = 0))])]
 
     # rad0 = super_resample(r0,wvl_7sc,neon_wvl,neon_fwhm)
     # Ifup0 = super_resample(rho_a_I*Ifdn_obs_trim_NIS_SSIM,flx_wvl,neon_wvl2[:,x],neon_fwhm)*Ifdn_obs_trim
@@ -738,7 +747,7 @@ if __name__ == '__main__':
 
         asd = dict([('spectra',target['ref']),('wvl',asd_wvl),('color',asd_color)])
 
-        plot_results(asd,R_albedo,R_stand, R_stand_adj, R_enhan, R_enhan_adj, title = target['name'], save = True)
+        plot_results(asd,R_albedo,R_stand, R_stand_adj, R_enhan, R_enhan_adj, title = target['fname'], save = True)
 
     plt.figure()
     plt.plot(neon_wvl0,super_resample(baseline_flx['downwelling'][flight_ind]/mu,baseline_flx['wvl'],neon_wvl0,neon_fwhm0)*10000,'r')
