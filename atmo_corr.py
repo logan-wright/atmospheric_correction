@@ -150,7 +150,7 @@ def adjacency_correction(obs,Idn,Iup,L0,Iup0,trans,mu = None, type = 'Standard')
         for n in range(n_spectra[0]):
             spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
             R[n,:] = (spectrum - L0 - ((Idn * transmittance1) / np.pi) * (Rh_bar / (1 - Rh_bar * spherical_albedo))) * ((np.pi * (1 - Rh_bar * spherical_albedo)) / (Idn * transmittance2))
-            
+
     elif type == 'Irradiance':
         transmittance = super_resample(trans['ts'] + trans['Ts'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         spherical_albedo = super_resample(trans['sph'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
@@ -291,7 +291,7 @@ def plot_results(*args, title = 'Reflectances', yrng = (0,1), save = False):
 #            item.set_fontsize(20)
 #        fig2.savefig(NAME + '.eps',dpi = 300, format = 'eps')
 
-def calc_rmse(baseline, wvl, *args, names = ('albedo','Standard', 'Standard with Adj Correction', 'Enhanced', 'Enhanced with Adj Correction')):
+def calc_rmse(baseline, wvl, *args):
     '''
     Created by: Logan Wright
     Created On: December 20 2018
@@ -312,11 +312,13 @@ def calc_rmse(baseline, wvl, *args, names = ('albedo','Standard', 'Standard with
     wv_bands = np.where(wv_bands == True)
 
     N = len(args)
-    
+
     for arg in args:
         RMSE = np.sqrt(np.sum(arg['spectra'] - baseline['spectra'])**2)/len(baseline['spectra'])
         RMSE_nowv = np.sqrt(np.sum(arg['spectra'][wv_bands] - baseline['spectra'][wv_bands])**2)/len(baseline['spectra'][wv_bands])
-    
+
+        print(arg['name'],RMSE,RMSE_nowv)
+
 #    fid = open('RMSE_Output_No_WV.txt','w');
 #    fid.write({'\t {}'*len(Retrievals)+'\n'}.format(Retrievals))
 #    for item in input:
@@ -464,11 +466,11 @@ if __name__ == '__main__':
     # This section includes filenames and constants for each day/flight line
     if date == '20150608':
         NISfile = os.path.abspath('../ATMO_CORR_Code/NIS01_20150608_165842_rdn')
-        tarp3_coord = np.array(((304,307),(364,369)))
-        tarp48_coord = np.array(((313,319),(365,370)))
-        veg_coord = np.array(((324,328),(380,420)))
-        EWroad_coord = np.array(((310,348),(354,356)))
-        NSroad_coord = np.array(((334,336),(317,354)))
+        tarp3_coord = np.array(((303,307),(363,369)))
+        tarp48_coord = np.array(((312,319),(364,370)))
+        veg_coord = np.array(((323,328),(379,420)))
+        EWroad_coord = np.array(((309,348),(353,356)))
+        NSroad_coord = np.array(((333,336),(316,354)))
         filename = [os.path.abspath('../ATMO_CORR_Code/NEON_20150608_Baseline'),
             os.path.abspath('../ATMO_CORR_Code/NEON_20150608_1kmAtmo_40H2O')]
         SunEllipticFactor = 0.97083    # Determined by Day of Year
@@ -480,11 +482,11 @@ if __name__ == '__main__':
 
     elif date == '20150616':
         NISfile = os.path.abspath('../ATMO_CORR_Code/NIS01_20150616_151613_rdn')
-        tarp3_coord = np.array(((140,145),(232,237)))
-        tarp48_coord = np.array(((150,155)(232,237)))
-        veg_coord = np.array(((155,160),(253,280)))
-        EWroad_coord = np.array(((148,185),(220,224)))
-        NSroad_coord = np.array(((168,172),(182,218)))
+        tarp3_coord = np.array(((139,145),(231,237)))
+        tarp48_coord = np.array(((149,155)(231,237)))
+        veg_coord = np.array(((154,160),(252,280)))
+        EWroad_coord = np.array(((147,185),(219,224)))
+        NSroad_coord = np.array(((167,172),(181,218)))
         filename = (os.path.abspath('../ATMO_CORR_Code/NEON_20150616_Baseline'),
             os.path.abspath('../ATMO_CORR_Code/NEON_20150616_259mAtmo_30H2O'))
         SunEllipticFactor = 0.96950    # Determined by Day of Year
@@ -495,11 +497,11 @@ if __name__ == '__main__':
 
     elif date == '20150617':
         NISfile = os.path.abspath('../ATMO_CORR_Code/NIS01_20150617_203142_rdn')
-        tarp3_coord = np.array(((174,180),(200,205)))
-        tarp48_coord = np.array(((183,190),(200,207)))
-        veg_coord = np.array(((196,199),(220,245)))
-        EWroad_coord = np.array(((173,226),(190,192)))
-        NSroad_coord = np.array(((208,211),(159,190)))
+        tarp3_coord = np.array(((173,180),(199,205)))
+        tarp48_coord = np.array(((182,190),(199,207)))
+        veg_coord = np.array(((195,199),(219,245)))
+        EWroad_coord = np.array(((172,226),(189,192)))
+        NSroad_coord = np.array(((207,211),(158,190)))
         filename = (os.path.abspath('../ATMO_CORR_Code/NEON_20150617_Baseline'),
             os.path.abspath('../ATMO_CORR_Code/NEON_20150617_1kmAtmo_40H2O'))
         SunEllipticFactor = 0.96933    # Determined by Day of Year
@@ -575,7 +577,7 @@ if __name__ == '__main__':
     r0 = baseline_7sc['path_radiance']/100 # factor of 100 to convert from uW*cm-2*sr-1*nm-1 to W*m2*sr-1*nm-1
 #    Iup0 = baseline_7sc['path_irradiance']/100 # factor of 100 to convert from uW*cm-2*nm-1 to W*m2*nm-1
 
-#    r0 = r0/100 
+#    r0 = r0/100
 
     # r0 = r0[0:,:]/100
     # Iup = Iup[0,:]
@@ -743,30 +745,30 @@ if __name__ == '__main__':
 
         # Standard Atmospheric Correction using Whole Atmosphere MODTRAN
         R_stand = standard_correction(target, rad0_neon, I0, baseline_acd, mu)
-        R_stand = dict([('spectra',R_stand),('wvl',neon_wvl),('color',standard)])
+        R_stand = dict([('spectra',R_stand),('wvl',neon_wvl),('color',standard),('name','Standard')])
         # Whole Atmosphere MODTRAN with adjacency correction using Upwelling Irradiance
         Iup = super_resample(Ifup_obs['If_up'],Ifup_obs['wvl'],target['resp_func']['wvl'], target['resp_func']['fwhm'])
         R_stand_adj = adjacency_correction(target, I0, Iup, rad0_neon, Iup0_neon, baseline_acd, mu = mu, type = 'Standard')
-        R_stand_adj = dict([('spectra',R_stand_adj),('wvl',neon_wvl),('color',standard_adj)])
+        R_stand_adj = dict([('spectra',R_stand_adj),('wvl',neon_wvl),('color',standard_adj),('name','Standard with Adjacency')])
 
         # Enhanced Atmospheric Correction using Downwelling Irradiance
         Idn = super_resample(Ifdn_obs['If_dn'],Ifdn_obs['wvl'],target['resp_func']['wvl'], target['resp_func']['fwhm'])
         rad0_obs = super_resample(rho_a_R,wvl_7sc,neon_wvl,neon_fwhm) * Idn
         R_enhan = irrad_correction(target, rad0_obs, Idn, flight_acd)
-        R_enhan = dict([('spectra',R_enhan),('wvl',neon_wvl),('color',intermediate)])
+        R_enhan = dict([('spectra',R_enhan),('wvl',neon_wvl),('color',intermediate),('name','Enhanced')])
         # Enhanced Atmospheric Correction Using Up- and Downwelling Irradiances
         Iup0_obs = super_resample(rho_a_I,wvl_7sc,neon_wvl,neon_fwhm) * Idn
         R_enhan_adj = adjacency_correction(target, Idn, Iup, rad0_obs, Iup0_obs, flight_acd, type = 'Irradiance')
-        R_enhan_adj = dict([('spectra',R_enhan_adj),('wvl',neon_wvl),('color',enhanced)])
+        R_enhan_adj = dict([('spectra',R_enhan_adj),('wvl',neon_wvl),('color',enhanced),('name','Enhanced with Adjacency')])
 
         R_albedo = albedo(target,Idn)
-        R_albedo = dict([('spectra',R_albedo),('wvl',neon_wvl),('color',albedo_color)])
+        R_albedo = dict([('spectra',R_albedo),('wvl',neon_wvl),('color',albedo_color),('name','Flight Level Albedo')])
 
-        asd = dict([('spectra',target['ref']/100),('wvl',asd_wvl),('color',asd_color)])
-        asd_neon = super_resample(target['ref']/100,asd_wvl,neon_wvl,neon_fwhm)
+        asd = dict([('spectra',target['ref']/100),('wvl',asd_wvl),('color',asd_color),('name','ASD-GroundTruth')])
+        asd_neon = dict([('spectra',super_resample(target['ref']/100,asd_wvl,neon_wvl,neon_fwhm)),('wvl',asd_wvl),('color',asd_color),('name','ASD-GroundTruth')])
 
         plot_results(asd,R_albedo,R_stand, R_stand_adj, R_enhan, R_enhan_adj, title = target['fname'], yrng = target['range'], save = True)
-        calc_rmse(asd_neon, neon_wvl, R_albedo, R_stand, R_stand_adj, R_enhan, R_enhan_adj, names = ('albedo','standard','standard adjacency','enhanced','enhanced adjacency'))
+        calc_rmse(asd_neon, neon_wvl, R_albedo, R_stand, R_stand_adj, R_enhan, R_enhan_adj)
 
     plt.figure()
     plt.plot(neon_wvl0,super_resample(baseline_flx['downwelling'][flight_ind]/mu,baseline_flx['wvl'],neon_wvl0,neon_fwhm0)*10000,'r')
