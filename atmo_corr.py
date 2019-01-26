@@ -521,6 +521,11 @@ if __name__ == '__main__':
     # Modify NEON Instrument Response Function
     neon_wvl0 = nis_datacube.resp_func['wvl'] + 1.28     # Add Empirically Determined Offset
     neon_fwhm0 = nis_datacube.resp_func['fwhm']
+    
+    # Load NEON Instrument Response Function # Try Other Response Function
+    respfunc = np.genfromtxt('../ATMO_CORR_Code/nis2013_fmed2_2013.dat')
+    neon_wvl0 = respfunc[:,1]+1.28
+    neon_fwhm0 = respfunc[:,2]
 
     # Set Wavelength Ranges
     # SSIR Index (25) to Neon Wvl (364) - Zenith
