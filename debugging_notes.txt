@@ -1,0 +1,13 @@
+Checked Possibilities:
+- Different spectra from NIS
+- Different transmittance
+- spherical albedo
+- Path radiance
+- mu
+
+FOUND ERRORS
+- was resampling to neon_wvl instead of just truncating to the correct indices,
+    replaced:
+      spectrum = super_resample(...)
+    with:
+      spectrum = obs['spectra'][n,0:152]

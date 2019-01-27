@@ -55,7 +55,8 @@ def standard_correction(obs,L0,I0,trans,mu):
     R = np.zeros((n_spectra[0],n_wvl[0]))
 
     for n in range(n_spectra[0]):
-        spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+#        spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+        spectrum = obs['spectra'][n,0:152]
         R[n,:] = np.pi * (spectrum - L0) / (spherical_albedo * np.pi * (spectrum - L0) + mu * I0 * ( transmittance ) )
 
     return R
@@ -84,11 +85,13 @@ def irrad_correction(obs,L0,If_dn,trans,mu = None):
     if mu is not None:
         for n in range(n_spectra[0]):
             # NEEDS TO BE ADJUSTED
-            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+#            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+            spectrum = obs['spectra'][n,0:152]
             R[n,:] = np.pi * (spectrum - L0) / (spherical_albedo * np.pi * (spectrum - L0) + If_dn * ( transmittance ) )
     else:
         for n in range(n_spectra[0]):
-            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+#            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+            spectrum = obs['spectra'][n,0:152]
             R[n,:] = np.pi * (spectrum - L0) / (spherical_albedo * np.pi * (spectrum - L0) + If_dn * ( transmittance ) )
 
     return R
@@ -112,7 +115,8 @@ def albedo(obs,Idn):
     A = np.zeros((n_spectra[0],n_wvl[0]))
 
     for n in range(n_spectra[0]):
-        spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'],obs['resp_func']['wvl'],obs['resp_func']['fwhm'])
+#        spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'],obs['resp_func']['wvl'],obs['resp_func']['fwhm'])
+        spectrum = obs['spectra'][n,0:152]
         A[n,:] = spectrum * np.pi / Idn
 
     return A
@@ -148,8 +152,9 @@ def adjacency_correction(obs,Idn,Iup,L0,Iup0,trans,mu = None, type = 'Standard')
         transmittance2 = super_resample((trans['ts'] + trans['Ts']) * trans['T'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
 
         for n in range(n_spectra[0]):
-            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
-            R[n,:] = (spectrum - L0 - ((Idn * transmittance1) / np.pi) * (Rh_bar / (1 - Rh_bar * spherical_albedo))) * ((np.pi * (1 - Rh_bar * spherical_albedo)) / (Idn * transmittance2))
+#            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+           spectrum = obs['spectra'][n,0:152]
+           R[n,:] = (spectrum - L0 - ((Idn * transmittance1) / np.pi) * (Rh_bar / (1 - Rh_bar * spherical_albedo))) * ((np.pi * (1 - Rh_bar * spherical_albedo)) / (Idn * transmittance2))
 
     elif type == 'Irradiance':
         transmittance = super_resample(trans['ts'] + trans['Ts'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
@@ -160,9 +165,11 @@ def adjacency_correction(obs,Idn,Iup,L0,Iup0,trans,mu = None, type = 'Standard')
         transmittance2 = super_resample((trans['ts'] + trans['Ts']) * trans['T'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
 
         for n in range(n_spectra[0]):
-            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+#            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
 #            R[n,:] = np.pi * (spectrum - L0) / (spherical_albedo * np.pi * (spectrum - L0) + Idn * ( transmittance ) )
 
+            spectrum = obs['spectra'][n,0:152]
+            
             R[n,:] = (spectrum - L0 - ((Idn * transmittance1) / np.pi) * (Rh_bar / (1 - Rh_bar * spherical_albedo))) * ((np.pi * (1 - Rh_bar * spherical_albedo)) / (Idn * transmittance2))
 
     else:
