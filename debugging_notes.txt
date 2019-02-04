@@ -5,9 +5,17 @@ Checked Possibilities:
 - Path radiance
 - mu
 
+- Problem seems to be with asd reference spectrum, unsure what
+
+
 FOUND ERRORS
 - was resampling to neon_wvl instead of just truncating to the correct indices,
     replaced:
       spectrum = super_resample(...)
     with:
       spectrum = obs['spectra'][n,0:152]
+- I verified that after the above fix the mean reflectance values were the same
+  between python and matlab/octave
+- plot_results() was already taking the averages, fixed so it will plot
+  averages without affecting subsequent code
+- Added averaging to calc_rmse() to exactly replicate matlab function
