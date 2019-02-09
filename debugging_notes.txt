@@ -5,7 +5,18 @@ Checked Possibilities:
 - Path radiance
 - mu
 
-- Problem seems to be with asd reference spectrum, unsure what
+- Problem seems to be with asd reference spectrum, unsure what --> SOLVED
+tarp03_r = super_resample(mean(tarp03,1),asd_wvl,neon_wvl,neon_fwhm)'./100;
+tarp3_asd08 = super_resample(mean(tarp03,1)',asd_wvl,neon_wvl,neon_fwhm)./100;
+
+ -- In tarp03_r mean(tarp03,1) and asd_wvl have dimensions [1x2151]
+      while neon_wvl and neon_fwhm have dimension [152x1]
+ -- While in tarp03_asd08, all inputs are in [2151x1] or [152x1] there should be
+      no difference in results but there must be some error in super_resample
+      that is dependent on this. While in Python they are vectors [2151,] and
+      [152,] so there is not ambiguity.
+
+  Need to resolve
 
 
 FOUND ERRORS

@@ -712,7 +712,7 @@ if __name__ == '__main__':
     plt.legend(['Jun 17','Jun 16','Jun 8'])
 
     asdtemp = sio.loadmat(asdfile)
-    asd_wvl = asdtemp['asd_wvl']
+    asd_wvl = np.squeeze(asdtemp['asd_wvl'])
     # asd_wvl = asd_wvl'
 #    if date == '20150608':
 #        asd_wvl = asd_wvl.T
