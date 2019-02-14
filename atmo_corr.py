@@ -325,8 +325,8 @@ def calc_rmse(baseline, wvl, *args):
 #        RMSE_tarp3 = [sqrt(sum(((mean(tarp3_ret,1)-tarp03_r)*100).^2)./numel(tarp03_r));
 #    sqrt(sum(((mean(tarp3_ret_noadj,1)-tarp03_r)*100).^2)./numel(tarp03_r));
 #    sqrt(sum(((mean(tarp3_ret_TOA_B,1)-tarp03_r)*100).^2)./numel(tarp03_r))];
-        RMSE = np.sqrt(np.sum((np.mean(arg['spectra'], axis = 0) - baseline['spectra'])*100)**2)/len(baseline['spectra'])
-        RMSE_nowv = np.sqrt(np.sum((np.mean(arg['spectra'][:,wv_bands], axis = 0) - baseline['spectra'][wv_bands])*100)**2)/len(baseline['spectra'][wv_bands])
+        RMSE = np.sqrt(np.sum(((np.mean(arg['spectra'], axis = 0) - baseline['spectra'])*100)**2)/len(baseline['spectra']))
+        RMSE_nowv = np.sqrt(np.sum(((np.mean(arg['spectra'][:,wv_bands], axis = 0) - baseline['spectra'][wv_bands])*100)**2)/len(baseline['spectra'][wv_bands]))
 
         print(arg['name'],RMSE,RMSE_nowv)
 
@@ -781,7 +781,7 @@ if __name__ == '__main__':
         R_albedo = dict([('spectra',R_albedo),('wvl',neon_wvl),('color',albedo_color),('name','Flight Level Albedo')])
 
         asd = dict([('spectra',target['ref']),('wvl',asd_wvl),('color',asd_color),('name','ASD-GroundTruth')])
-        asd_neon = dict([('spectra',super_resample(target['ref'],asd_wvl,neon_wvl,neon_fwhm)),('wvl',asd_wvl),('color',asd_color),('name','ASD-GroundTruth')])
+        asd_neon = dict([('spectra',super_resample(target['ref'],asd_wvl,neon_wvl,neon_fwhm)/100),('wvl',asd_wvl),('color',asd_color),('name','ASD-GroundTruth')])
 
         plot_results(asd,R_albedo,R_stand, R_stand_adj, R_enhan, R_enhan_adj, title = target['fname'], yrng = target['range'], save = True)
         calc_rmse(asd_neon, neon_wvl, R_albedo, R_stand, R_stand_adj, R_enhan, R_enhan_adj)

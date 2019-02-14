@@ -16,7 +16,13 @@ tarp3_asd08 = super_resample(mean(tarp03,1)',asd_wvl,neon_wvl,neon_fwhm)./100;
       that is dependent on this. While in Python they are vectors [2151,] and
       [152,] so there is not ambiguity.
 
-  Need to resolve
+-  Fixed by moving transpose(') inside of super_resample called
+
+- Fixed calc_rmse problem, **2 was outside of sum instead of inside
+
+  Next Problem:
+    Now Standard RMSE values match, still difference in Enhanced, and Enhanced
+    with Adjacency need to compare spectra
 
 
 FOUND ERRORS
