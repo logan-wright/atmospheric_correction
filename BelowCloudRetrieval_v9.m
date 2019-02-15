@@ -268,9 +268,9 @@ legend('Jun 17','Jun 16','Jun 8')
 
 load(asdfile)
 % asd_wvl = asd_wvl';
-if str2double(date) == 20150608
-    asd_wvl = asd_wvl';
-end
+% if str2double(date) == 20150608
+%     asd_wvl = asd_wvl';
+% end
 
 % Modelled vs Measured Irradiances
 obs_time = reshape(nistime(tarp3_coord(2,1):tarp3_coord(2,2),tarp3_coord(1,1):tarp3_coord(1,2)),1,[]);
@@ -428,7 +428,8 @@ print(fig,'-depsc','-r300','TestTarp3Retrieval.eps')
 wv_bands = xor(neon_wvl < 928, neon_wvl > 989);
 wv_bands = xor(wv_bands,neon_wvl > 1095);
 
-tarp03_r = super_resample(mean(tarp03,1),asd_wvl,neon_wvl,neon_fwhm)'./100;
+% tarp03_r = super_resample(mean(tarp03,1),asd_wvl,neon_wvl,neon_fwhm)./100;
+tarp03_r = super_resample(mean(tarp03,1)',asd_wvl,neon_wvl,neon_fwhm)'./100;
 
 figure;hold on;plot(neon_wvl,(mean(tarp3_ret,1)-tarp03_r)*100,'Color',enhanced)
 plot(neon_wvl,(mean(tarp3_ret_noadj,1)-tarp03_r)*100,'Color',intermediate)
@@ -546,7 +547,8 @@ print(gcf,'-depsc','-r300','TestTarp48Retrieval_MU.eps')
 
 
 
-tarp48_r = super_resample(mean(tarp48,1),asd_wvl,neon_wvl,neon_fwhm)'./100;
+% tarp48_r = super_resample(mean(tarp48,1),asd_wvl,neon_wvl,neon_fwhm)'./100;
+tarp48_r = super_resample(mean(tarp48,1)',asd_wvl,neon_wvl,neon_fwhm)'./100;
 
 figure;hold on;plot(neon_wvl,(mean(tarp48_ret,1)-tarp48_r)*100,'Color',enhanced)
 plot(neon_wvl,(mean(tarp48_ret_noadj,1)-tarp48_r)*100,'Color',intermediate)
@@ -726,7 +728,8 @@ fig = gcf;
 set(fig,'PaperUnits','inches','PaperPosition',[0 0 4 3]);
 print(gcf,'-depsc','-r300','TestVegRetrieval_MU.eps')
 
-veg_r = super_resample(mean(veg,1),asd_wvl,neon_wvl,neon_fwhm)'./100;
+% veg_r = super_resample(mean(veg,1),asd_wvl,neon_wvl,neon_fwhm)'./100;
+veg_r = super_resample(mean(veg,1)',asd_wvl,neon_wvl,neon_fwhm)'./100;
 
 disp('NoAdj Mu:');disp(sqrt(sum(((mean(veg_ret_noadj_mu,1)-veg_r)*100).^2)./numel(veg_r)))
 disp('Ret Mu:');disp(sqrt(sum(((mean(veg_ret_mu,1)-veg_r)*100).^2)./numel(veg_r)))
@@ -803,7 +806,8 @@ fig = gcf;
 set(fig,'PaperUnits','inches','PaperPosition',[0 0 4 4]);
 print(gcf,'-depsc','-r300','TestEWroadRetrieval.eps')
 
-ewroad_r = super_resample(mean(ewroad,1),asd_wvl,neon_wvl,neon_fwhm)'./100;
+% ewroad_r = super_resample(mean(ewroad,1),asd_wvl,neon_wvl,neon_fwhm)'./100;
+ewroad_r = super_resample(mean(ewroad,1)',asd_wvl,neon_wvl,neon_fwhm)'./100;
 
 figure;hold on;plot(neon_wvl,(mean(EWroad_ret,1)-ewroad_r)*100,'Color',enhanced)
 plot(neon_wvl,(mean(EWroad_ret_noadj,1)-ewroad_r)*100,'Color',intermediate)
@@ -865,7 +869,8 @@ fig = gcf;
 set(fig,'PaperUnits','inches','PaperPosition',[0 0 4 4]);
 print(gcf,'-depsc','-r300','TestNSroadRetrieval.eps')
 
-nsroad_r = super_resample(mean(nsroad,1),asd_wvl,neon_wvl,neon_fwhm)'./100;
+% nsroad_r = super_resample(mean(nsroad,1),asd_wvl,neon_wvl,neon_fwhm)'./100;
+nsroad_r = super_resample(mean(nsroad,1)',asd_wvl,neon_wvl,neon_fwhm)'./100;
 
 figure;hold on;plot(neon_wvl,(mean(NSroad_ret,1)-nsroad_r)*100,'Color',enhanced)
 plot(neon_wvl,(mean(NSroad_ret_noadj,1)-nsroad_r)*100,'Color',intermediate)
