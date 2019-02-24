@@ -31,18 +31,24 @@ def load_flx(filepath):
            hdr.append(temp.strip('\n -'))
     fid.close()
 
+    # Get Altitude Data
     temp = hdr[3].split()
     n = len(temp)
-
     altitudes = [temp[i] for i in np.arange(1,n,2,dtype = int)]
+
+    # Get Flux Data
     rawdata = np.genfromtxt(filepath,skip_header = 16,skip_footer = 2)
+    n = rawdata.shape[1]
 
     direct_downwelling = [rawdata[:,i] for i in np.arange(3,n,3,dtype = int)]
     diffuse_downwelling = [rawdata[:,i] for i in np.arange(2,n,3,dtype = int)]
     upwelling = [rawdata[:,i] for i in np.arange(1,n,3,dtype = int)]
     wvl = rawdata[:,0]
 
-    conv = 10000   # Scale Factor to convert [W cm^-2 nm^-1] to [W m^-2 nm^-2], used for .flx MODTRAN output file
+    # conv = 10000   # Scale Factor to convert [W cm^-2 nm^-1] to [W m^-2 nm^-2], used for .flx MODTRAN output file
+    downwelling = list()
+    for i in range(len(altitudes)):
+        downwelling.append(direct_downwelling[i] + diffuse_downwelling[i])
 
     ret_dict = dict([('header',hdr),
                      ('wvl',wvl),
@@ -50,7 +56,7 @@ def load_flx(filepath):
                      ('downwelling_direct', direct_downwelling),
                      ('downwelling_diffuse',diffuse_downwelling),
                      ('upwelling',upwelling),
-                     ('downwelling',direct_downwelling + diffuse_downwelling)])
+                     ('downwelling',downwelling)])
     return ret_dict
 
 def load_7sc(filepath):

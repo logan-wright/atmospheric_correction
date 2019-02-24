@@ -76,23 +76,29 @@ def irrad_correction(obs,L0,If_dn,trans,mu = None):
 
     '''
 
+
     transmittance = super_resample((trans['Ts'] + trans['ts']) * (trans['T'] + trans['t']),trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
     spherical_albedo = super_resample(trans['sph'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
 
     n_spectra =obs['spectra'].shape
     n_wvl = obs['resp_func']['wvl'].shape
     R = np.zeros((n_spectra[0],n_wvl[0]))
+    
+    # CHECK IF Number of Spectra == Number of irradiance
+    if obs['spectra'].shape[0] != If_dn.shape[0]:
+        print('WARNING: Non-matching number of irradiance spectra')
+        
     if mu is not None:
         for n in range(n_spectra[0]):
             # NEEDS TO BE ADJUSTED
 #            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
             spectrum = obs['spectra'][n,0:152]
-            R[n,:] = np.pi * (spectrum - L0) / (spherical_albedo * np.pi * (spectrum - L0) + If_dn * ( transmittance ) )
+            R[n,:] = np.pi * (spectrum - L0[n,:]) / (spherical_albedo * np.pi * (spectrum - L0[n,:]) + If_dn[n,:] * ( transmittance ) )
     else:
         for n in range(n_spectra[0]):
 #            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
             spectrum = obs['spectra'][n,0:152]
-            R[n,:] = np.pi * (spectrum - L0) / (spherical_albedo * np.pi * (spectrum - L0) + If_dn * ( transmittance ) )
+            R[n,:] = np.pi * (spectrum - L0[n,:]) / (spherical_albedo * np.pi * (spectrum - L0[n,:]) + If_dn[n,:] * ( transmittance ) )
 
     return R
 
@@ -117,7 +123,7 @@ def albedo(obs,Idn):
     for n in range(n_spectra[0]):
 #        spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'],obs['resp_func']['wvl'],obs['resp_func']['fwhm'])
         spectrum = obs['spectra'][n,0:152]
-        A[n,:] = spectrum * np.pi / Idn
+        A[n,:] = spectrum * np.pi / Idn[n,:]
 
     return A
 
@@ -146,20 +152,19 @@ def adjacency_correction(obs,Idn,Iup,L0,Iup0,trans,mu = None, type = 'Standard')
         transmittance = super_resample((trans['Ts'] + trans['ts']) * (trans['T'] + trans['t']),trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         spherical_albedo = super_resample(trans['sph'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
 
-        Rh_bar = (Iup - Iup0) / ((mu * Idn * transmittance) + (Iup - Iup0) * spherical_albedo)
-
         transmittance1 = super_resample((trans['ts'] + trans['Ts']) * trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         transmittance2 = super_resample((trans['ts'] + trans['Ts']) * trans['T'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
 
         for n in range(n_spectra[0]):
 #            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
            spectrum = obs['spectra'][n,0:152]
+           Rh_bar = (Iup[n,:] - Iup0) / ((mu * Idn * transmittance) + (Iup[n,:] - Iup0) * spherical_albedo)
            R[n,:] = (spectrum - L0 - ((Idn * transmittance1) / np.pi) * (Rh_bar / (1 - Rh_bar * spherical_albedo))) * ((np.pi * (1 - Rh_bar * spherical_albedo)) / (Idn * transmittance2))
 
     elif type == 'Irradiance':
         transmittance = super_resample(trans['ts'] + trans['Ts'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         spherical_albedo = super_resample(trans['sph'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
-        Rh_bar = (Iup - Iup0) / ((Idn * transmittance) + (Iup - Iup0) * spherical_albedo)
+        
 
         transmittance1 = super_resample((trans['ts'] + trans['Ts']) * trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         transmittance2 = super_resample((trans['ts'] + trans['Ts']) * trans['T'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
@@ -169,8 +174,8 @@ def adjacency_correction(obs,Idn,Iup,L0,Iup0,trans,mu = None, type = 'Standard')
 #            R[n,:] = np.pi * (spectrum - L0) / (spherical_albedo * np.pi * (spectrum - L0) + Idn * ( transmittance ) )
 
             spectrum = obs['spectra'][n,0:152]
-            
-            R[n,:] = (spectrum - L0 - ((Idn * transmittance1) / np.pi) * (Rh_bar / (1 - Rh_bar * spherical_albedo))) * ((np.pi * (1 - Rh_bar * spherical_albedo)) / (Idn * transmittance2))
+            Rh_bar = (Iup[n,:] - Iup0[n,:]) / ((Idn[n,:] * transmittance) + (Iup[n,:] - Iup0[n,:]) * spherical_albedo)
+            R[n,:] = (spectrum - L0[n,:] - ((Idn[n,:] * transmittance1) / np.pi) * (Rh_bar / (1 - Rh_bar * spherical_albedo))) * ((np.pi * (1 - Rh_bar * spherical_albedo)) / (Idn[n,:] * transmittance2))
 
     else:
         print('Invalid Type: Type "',type,'" is not a valid selection')
@@ -751,24 +756,52 @@ if __name__ == '__main__':
 
     for target in target_list:
         print(target['name'])
-        # Note - I should rewrite to find the closest SSIR observation to each pixel's time, not the mean time
-        obs_time = np.mean(nistime[target['coord'][1,0]:target['coord'][1,1],target['coord'][0,0]:target['coord'][0,1]])
-        ssirtime_ind = np.argmin(np.abs(ssim['ssirtime']-obs_time))
-        Ifdn_obs = dict([('wvl',ssim['zwvl']),('If_dn',ssim['zspect'][ssirtime_ind,:])])
-        Ifup_obs = dict([('wvl',ssim['nwvl']),('If_up',ssim['nspect'][ssirtime_ind,:])])
+        
         target['spectra'] = np.reshape(nis_datacube.data_cube[target['coord'][1,0]:target['coord'][1,1],target['coord'][0,0]:target['coord'][0,1],:],(-1,426))
         target['resp_func'] = dict([('wvl',neon_wvl),('fwhm',neon_fwhm),('wvl0',neon_wvl0)])
+        
+        # Time Dependent Solver
+        obstime =  nistime[target['coord'][1,0]:target['coord'][1,1],target['coord'][0,0]:target['coord'][0,1]].flatten()
+        temp_Ifdn = list()
+        temp_Ifup = list()
+        
+        Iup = np.zeros((target['spectra'].shape[0],target['resp_func']['wvl'].shape[0]))
+        Idn = np.zeros((target['spectra'].shape[0],target['resp_func']['wvl'].shape[0]))
+        
+        for i in range(len(obstime)):
+#            obs_time = np.mean(nistime[target['coord'][1,0]:target['coord'][1,1],target['coord'][0,0]:target['coord'][0,1]])
+            ssirtime_ind = np.argmin(np.abs(ssim['ssirtime']-obstime[i]))
+            temp_Ifdn.append(ssim['zspect'][ssirtime_ind,:])
+            temp_Ifup.append(ssim['nspect'][ssirtime_ind,:])
+            
+            # For R_stand_adj:
+            Iup[i,:] = super_resample(temp_Ifup[-1],ssim['nwvl'],target['resp_func']['wvl'], target['resp_func']['fwhm'])
+            
+            # For R_enhan:
+            Idn[i,:] = super_resample(temp_Ifdn[-1],ssim['zwvl'],target['resp_func']['wvl'], target['resp_func']['fwhm'])
+                    
+        Ifdn_obs = dict([('wvl',ssim['zwvl']),('If_dn',np.array(temp_Ifdn))])
+        Ifup_obs = dict([('wvl',ssim['nwvl']),('If_up',np.array(temp_Ifup))])
+
+            
+#        # Note - I should rewrite to find the closest SSIR observation to each pixel's time, not the mean time
+#        obs_time = np.mean(nistime[target['coord'][1,0]:target['coord'][1,1],target['coord'][0,0]:target['coord'][0,1]])
+#        ssirtime_ind = np.argmin(np.abs(ssim['ssirtime']-obs_time))
+#        Ifdn_obs = dict([('wvl',ssim['zwvl']),('If_dn',ssim['zspect'][ssirtime_ind,:])])
+#        Ifup_obs = dict([('wvl',ssim['nwvl']),('If_up',ssim['nspect'][ssirtime_ind,:])])
+#        target['spectra'] = np.reshape(nis_datacube.data_cube[target['coord'][1,0]:target['coord'][1,1],target['coord'][0,0]:target['coord'][0,1],:],(-1,426))
+#        target['resp_func'] = dict([('wvl',neon_wvl),('fwhm',neon_fwhm),('wvl0',neon_wvl0)])
 
         # Standard Atmospheric Correction using Whole Atmosphere MODTRAN
         R_stand = standard_correction(target, rad0_neon, I0, baseline_acd, mu)
         R_stand = dict([('spectra',R_stand),('wvl',neon_wvl),('color',standard),('name','Standard')])
         # Whole Atmosphere MODTRAN with adjacency correction using Upwelling Irradiance
-        Iup = super_resample(Ifup_obs['If_up'],Ifup_obs['wvl'],target['resp_func']['wvl'], target['resp_func']['fwhm'])
+#        Iup = super_resample(Ifup_obs['If_up'],Ifup_obs['wvl'],target['resp_func']['wvl'], target['resp_func']['fwhm'])
         R_stand_adj = adjacency_correction(target, I0, Iup, rad0_neon, Iup0_neon, baseline_acd, mu = mu, type = 'Standard')
         R_stand_adj = dict([('spectra',R_stand_adj),('wvl',neon_wvl),('color',standard_adj),('name','Standard with Adjacency')])
 
         # Enhanced Atmospheric Correction using Downwelling Irradiance
-        Idn = super_resample(Ifdn_obs['If_dn'],Ifdn_obs['wvl'],target['resp_func']['wvl'], target['resp_func']['fwhm'])
+#        Idn = super_resample(Ifdn_obs['If_dn'],Ifdn_obs['wvl'],target['resp_func']['wvl'], target['resp_func']['fwhm'])
         rad0_obs = super_resample(rho_a_R,wvl_7sc,neon_wvl,neon_fwhm) * Idn
         R_enhan = irrad_correction(target, rad0_obs, Idn, flight_acd)
         R_enhan = dict([('spectra',R_enhan),('wvl',neon_wvl),('color',intermediate),('name','Enhanced')])

@@ -24,6 +24,19 @@ tarp3_asd08 = super_resample(mean(tarp03,1)',asd_wvl,neon_wvl,neon_fwhm)./100;
     Now Standard RMSE values match, still difference in Enhanced, and Enhanced
     with Adjacency need to compare spectra
 
+    - Checked Spectra - they match
+    - check reference tarp, they match
+    - transmittance is the same
+
+  Need to do time matching in solving function? - Added time matching function,
+    it made very little difference
+    - Rad0 -- Doesn't match because of rho_a_R
+    - Idn?
+
+    X baseline_flx['downwelling'] = baseline_flx['downwelling_direct'], not sure why
+    - Fixed Error in modtran_tools.load_flx() that gave inccorrect values for downwelling Irradiance
+
+Still difference in rho_a_R
 
 FOUND ERRORS
 - was resampling to neon_wvl instead of just truncating to the correct indices,
