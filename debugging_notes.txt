@@ -38,8 +38,10 @@ Checked Possibilities:
     -- (RESOLVED) Discrepancy was caused by order of resampling.
 
     -- IN PROGRESS:
-        Solve same issue for adjacency_correction
-
+        Solve same issue for adjacency_correction,
+        -- (FIXED) rho_a_I was reversed (was long to short), reset to normal wavelength order (short ~350nm to long ~2500nm)
+        -- Still not exact matching
+        -- Need to Check if adjacency_correction( type == standard) is fixed to match the irradiance version of the function
 Still difference in rho_a_R
 
 FOUND ERRORS

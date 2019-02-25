@@ -160,6 +160,14 @@ def adjacency_correction(obs,Idn,Iup,L0,Iup0,trans,mu = None, type = 'Standard')
 
         transmittance1 = super_resample((trans['ts'] + trans['Ts']) * trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         transmittance2 = super_resample((trans['ts'] + trans['Ts']) * trans['T'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+        
+#        # Mirror Matlab Setup
+#        t_t = super_resample(trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+#        t_Tso = super_resample(trans['Tso'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+#        transmittance = t_t**2 + 2*t_t*np.sqrt(t_Tso) + t_Tso
+#        
+#        transmittance1 = super_resample((trans['ts'] + trans['Ts']) * trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+#        transmittance2 = super_resample((trans['ts'] + trans['Ts']) * trans['T'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
 
         for n in range(n_spectra[0]):
 #            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
@@ -171,9 +179,16 @@ def adjacency_correction(obs,Idn,Iup,L0,Iup0,trans,mu = None, type = 'Standard')
         transmittance = super_resample(trans['ts'] + trans['Ts'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         spherical_albedo = super_resample(trans['sph'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         
-
         transmittance1 = super_resample((trans['ts'] + trans['Ts']) * trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         transmittance2 = super_resample((trans['ts'] + trans['Ts']) * trans['T'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+        
+        # Mirror Matlab Setup
+        t_t = super_resample(trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+        t_Tso = super_resample(trans['Tso'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+        transmittance = (t_t + np.sqrt(t_Tso))**2
+        
+        transmittance1 = (t_t + np.sqrt(t_Tso))*t_t
+        transmittance2 = (t_t + np.sqrt(t_Tso))*np.sqrt(t_Tso)
 
         for n in range(n_spectra[0]):
 #            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
@@ -611,7 +626,7 @@ if __name__ == '__main__':
 
     # Calculate Atmospheric Reflectance
 
-    rho_a_I = baseline_flx['upwelling'][flight_ind]/(baseline_flx['downwelling'][flight_ind])
+    rho_a_I = np.flip(baseline_flx['upwelling'][flight_ind]/(baseline_flx['downwelling'][flight_ind]))
     rho_a_R = r0/(1e4*np.flipud(baseline_flx['downwelling'][flight_ind]))
 
     rad0_neon = super_resample(r0,wvl_7sc,neon_wvl,neon_fwhm)
