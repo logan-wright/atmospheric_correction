@@ -76,8 +76,14 @@ def irrad_correction(obs,L0,If_dn,trans,mu = None):
 
     '''
 
-
+    # This transmittance calculation is more correct!
     transmittance = super_resample((trans['Ts'] + trans['ts']) * (trans['T'] + trans['t']),trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+
+    # Mirror Matlab Setup
+    t_t = super_resample(trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+    t_Tso = super_resample(trans['Tso'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+    transmittance = t_t**2 + 2*t_t*np.sqrt(t_Tso) + t_Tso
+
     spherical_albedo = super_resample(trans['sph'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
 
     n_spectra =obs['spectra'].shape
@@ -775,13 +781,13 @@ if __name__ == '__main__':
             temp_Ifup.append(ssim['nspect'][ssirtime_ind,:])
             
             # For R_stand_adj:
-            Iup[i,:] = super_resample(temp_Ifup[-1],ssim['nwvl'],target['resp_func']['wvl'], target['resp_func']['fwhm'])
+            Iup[i,:] = super_resample(ssim['nspect'][ssirtime_ind,:],nwvl,target['resp_func']['wvl'], target['resp_func']['fwhm'])
             
             # For R_enhan:
-            Idn[i,:] = super_resample(temp_Ifdn[-1],ssim['zwvl'],target['resp_func']['wvl'], target['resp_func']['fwhm'])
+            Idn[i,:] = super_resample(ssim['zspect'][ssirtime_ind,:],zwvl,target['resp_func']['wvl'], target['resp_func']['fwhm'])
                     
-        Ifdn_obs = dict([('wvl',ssim['zwvl']),('If_dn',np.array(temp_Ifdn))])
-        Ifup_obs = dict([('wvl',ssim['nwvl']),('If_up',np.array(temp_Ifup))])
+#        Ifdn_obs = dict([('wvl',ssim['zwvl']),('If_dn',np.array(temp_Ifdn))])
+#        Ifup_obs = dict([('wvl',ssim['nwvl']),('If_up',np.array(temp_Ifup))])
 
             
 #        # Note - I should rewrite to find the closest SSIR observation to each pixel's time, not the mean time

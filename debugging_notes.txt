@@ -5,36 +5,40 @@ Checked Possibilities:
 - Path radiance
 - mu
 
-- Problem seems to be with asd reference spectrum, unsure what --> SOLVED
-tarp03_r = super_resample(mean(tarp03,1),asd_wvl,neon_wvl,neon_fwhm)'./100;
-tarp3_asd08 = super_resample(mean(tarp03,1)',asd_wvl,neon_wvl,neon_fwhm)./100;
+- (FIXED) Problem seems to be with asd reference spectrum, unsure what --> SOLVED
+    tarp03_r = super_resample(mean(tarp03,1),asd_wvl,neon_wvl,neon_fwhm)'./100;
+    tarp3_asd08 = super_resample(mean(tarp03,1)',asd_wvl,neon_wvl,neon_fwhm)./100;
+    -- In tarp03_r mean(tarp03,1) and asd_wvl have dimensions [1x2151]
+       while neon_wvl and neon_fwhm have dimension [152x1]
+    -- While in tarp03_asd08, all inputs are in [2151x1] or [152x1] there should be
+       no difference in results but there must be some error in super_resample
+       that is dependent on this. While in Python they are vectors [2151,] and
+       [152,] so there is not ambiguity.
+    -- (THE FIX) fixed by moving transpose(') inside of super_resample called
 
- -- In tarp03_r mean(tarp03,1) and asd_wvl have dimensions [1x2151]
-      while neon_wvl and neon_fwhm have dimension [152x1]
- -- While in tarp03_asd08, all inputs are in [2151x1] or [152x1] there should be
-      no difference in results but there must be some error in super_resample
-      that is dependent on this. While in Python they are vectors [2151,] and
-      [152,] so there is not ambiguity.
+- (FIXED) calc_rmse problem, **2 was outside of sum instead of inside
 
--  Fixed by moving transpose(') inside of super_resample called
+- (FIXED) Time Matching Need to do time matching in solving function?
+    -- Added time matching function, it made very little difference
 
-- Fixed calc_rmse problem, **2 was outside of sum instead of inside
-
-  Next Problem:
+- Problem:
     Now Standard RMSE values match, still difference in Enhanced, and Enhanced
     with Adjacency need to compare spectra
 
-    - Checked Spectra - they match
-    - check reference tarp, they match
-    - transmittance is the same
+    - Checked NIS (Obs) Spectra - they match
+    - Checked reference tarp, they match
+    - Checked transmittance, they match
 
-  Need to do time matching in solving function? - Added time matching function,
-    it made very little difference
-    - Rad0 -- Doesn't match because of rho_a_R
-    - Idn?
+    -- (FIXED) baseline_flx['downwelling'] = baseline_flx['downwelling_direct'],
+      This was corrected it was due to an Error in modtran_tools.load_flx() that
+      gave incorrect values for downwelling irradiance
+    -- (FIXED) Downwelling irradiance values didn't match, was using wrong ssim
+      zwvl and nwvl for resampling in python code
 
-    X baseline_flx['downwelling'] = baseline_flx['downwelling_direct'], not sure why
-    - Fixed Error in modtran_tools.load_flx() that gave inccorrect values for downwelling Irradiance
+    -- (RESOLVED) Discrepancy was caused by order of resampling.
+
+    -- IN PROGRESS:
+        Solve same issue for adjacency_correction
 
 Still difference in rho_a_R
 
