@@ -155,19 +155,20 @@ def adjacency_correction(obs,Idn,Iup,L0,Iup0,trans,mu = None, type = 'Standard')
         if mu is None:
             print('ERROR! mu value required for standard adjacency correction!')
             return None
-        transmittance = super_resample((trans['Ts'] + trans['ts']) * (trans['T'] + trans['t']),trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+        # Correct Transmittance Calculations
+#        transmittance = super_resample((trans['Ts'] + trans['ts']) * (trans['T'] + trans['t']),trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         spherical_albedo = super_resample(trans['sph'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
-
-        transmittance1 = super_resample((trans['ts'] + trans['Ts']) * trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
-        transmittance2 = super_resample((trans['ts'] + trans['Ts']) * trans['T'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
-        
-#        # Mirror Matlab Setup
-#        t_t = super_resample(trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
-#        t_Tso = super_resample(trans['Tso'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
-#        transmittance = t_t**2 + 2*t_t*np.sqrt(t_Tso) + t_Tso
-#        
+#
 #        transmittance1 = super_resample((trans['ts'] + trans['Ts']) * trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
 #        transmittance2 = super_resample((trans['ts'] + trans['Ts']) * trans['T'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+        
+#        # Mirror Matlab Setup
+        t_t = super_resample(trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+        t_Tso = super_resample(trans['Tso'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+        transmittance = t_t**2 + 2*t_t*np.sqrt(t_Tso) + t_Tso
+        
+        transmittance1 = super_resample((trans['ts'] + trans['Ts']) * trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+        transmittance2 = super_resample((trans['ts'] + trans['Ts']) * trans['T'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
 
         for n in range(n_spectra[0]):
 #            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
@@ -176,11 +177,12 @@ def adjacency_correction(obs,Idn,Iup,L0,Iup0,trans,mu = None, type = 'Standard')
            R[n,:] = (spectrum - L0 - ((Idn * transmittance1) / np.pi) * (Rh_bar / (1 - Rh_bar * spherical_albedo))) * ((np.pi * (1 - Rh_bar * spherical_albedo)) / (Idn * transmittance2))
 
     elif type == 'Irradiance':
-        transmittance = super_resample(trans['ts'] + trans['Ts'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+        # Correct Transmittance Calculations
+#        transmittance = super_resample(trans['ts'] + trans['Ts'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         spherical_albedo = super_resample(trans['sph'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
-        
-        transmittance1 = super_resample((trans['ts'] + trans['Ts']) * trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
-        transmittance2 = super_resample((trans['ts'] + trans['Ts']) * trans['T'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+#        
+#        transmittance1 = super_resample((trans['ts'] + trans['Ts']) * trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
+#        transmittance2 = super_resample((trans['ts'] + trans['Ts']) * trans['T'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         
         # Mirror Matlab Setup
         t_t = super_resample(trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
@@ -245,39 +247,6 @@ def load_ASD(filepath):
     print('NOT YET IMPLEMENTED')
     return
 
-def atmcorr(wvl,radiance,model,irrad_up = None,irrad_down = None):
-    '''
-    Created by: Logan Wright
-    Created On: December 20 2018
-
-    Translated from original MATLAB Code
-
-    DESCRIPTION:
-
-    Inputs:
-
-    Outputs:
-
-    '''
-#    n = np.size(radiance)
-#    # Observation Retrieval
-#    [~,ssirtime_ind] = np.min(np.abs(ssirtime-obs_time[j]))
-#
-#    Ifdn_obs_trim = super_resample(zspect(ssirtime_ind,:)',zwvl,neon_wvl,neon_fwhm)
-#    Ifup_obs_trim = super_resample(nspect(ssirtime_ind,:)',nwvl,neon_wvl,neon_fwhm)
-#
-#    Ifup0 = super_resample(rho_a_I,flx_wvl,neon_wvl,neon_fwhm)*Ifdn_obs_trim
-#    rad0 = super_resample(rho_a_R,flx_wvl,neon_wvl,neon_fwhm)*Ifdn_obs_trim
-#
-#    tarp3_ret_noadj(j,:) = pi * (Rob - rad0) / (sph_alb_1km * pi * ...
-#            (Rob - rad0) + Ifdn_obs_trim * (t_1km**2 + 2 * t_1km * sqrt(Tso_1km) + Tso_1km))
-#
-#    rho_bar_ret = (Ifup_obs_trim - Ifup0) / ((Ifdn_obs_trim * ...
-#            ((t_1km + sqrt(Tso_1km))**2) + (Ifup_obs_trim - Ifup0) * sph_alb_1km))
-#    tarp3_ret(j,:) = (Rob - rad0 - (Ifdn_obs_trim * (t_1km + sqrt(Tso_1km)) * t_1km) / ...
-#            pi * (rho_bar_ret / (1 - rho_bar_ret * sph_alb_1km))) * ...
-#            (pi / (Ifdn_obs_trim * (t_1km + sqrt(Tso_1km)) * sqrt(Tso_1km))) * (1 - rho_bar_ret * sph_alb_1km)
-
 def plot_results(*args, title = 'Reflectances', yrng = (0,1), save = False):
     '''
     Created by: Logan Wright
@@ -340,34 +309,19 @@ def calc_rmse(baseline, wvl, *args):
     Outputs:
 
     '''
-    # Write file of RMS Error
-    wv_bands = np.logical_xor(wvl < 928, wvl > 989)
-    wv_bands = np.logical_xor(wv_bands,wvl > 1095)
-    wv_bands = np.where(wv_bands == True)
+    out = dict()
 
-    N = len(args)
+#    wv_bands = np.logical_xor(wvl < 928, wvl > 989)
+#    wv_bands = np.logical_xor(wv_bands,wvl > 1095)
+#    wv_bands = np.where(wv_bands == True)
 
     for arg in args:
-#        RMSE_tarp3 = [sqrt(sum(((mean(tarp3_ret,1)-tarp03_r)*100).^2)./numel(tarp03_r));
-#    sqrt(sum(((mean(tarp3_ret_noadj,1)-tarp03_r)*100).^2)./numel(tarp03_r));
-#    sqrt(sum(((mean(tarp3_ret_TOA_B,1)-tarp03_r)*100).^2)./numel(tarp03_r))];
         RMSE = np.sqrt(np.sum(((np.mean(arg['spectra'], axis = 0) - baseline['spectra'])*100)**2)/len(baseline['spectra']))
-        RMSE_nowv = np.sqrt(np.sum(((np.mean(arg['spectra'][:,wv_bands], axis = 0) - baseline['spectra'][wv_bands])*100)**2)/len(baseline['spectra'][wv_bands]))
+#        RMSE_nowv = np.sqrt(np.sum(((np.mean(arg['spectra'][:,wv_bands], axis = 0) - baseline['spectra'][wv_bands])*100)**2)/len(baseline['spectra'][wv_bands]))
 
-        print(arg['name'],RMSE,RMSE_nowv)
-
-#    fid = open('RMSE_Output_No_WV.txt','w');
-#    fid.write({'\t {}'*len(Retrievals)+'\n'}.format(Retrievals))
-#    for item in input:
-#        fid.write('{}' + '\t {:4.2f}'*N).format(item['name'],item['vals'])
-#    fid.close()
-#
-#
-#    fid = open('RMSE_Output.txt','w');
-#    fid.write({'\t {}'*len(Retrievals)+'\n'}.format(Retrievals))
-#    for item in input:
-#        fid.write('{}' + '\t {:4.2f}'*N).format(item['name'],item['vals'])
-#    fid.close()
+        out[arg['name']] = RMSE
+        
+    return out
 
 def sampling_issue(I0_orig,SunEllipticFactor,zwvl,ssim_zfwhm,neon_wvl,neon_fwhm,t_Ts,t_ts):
     '''
@@ -594,16 +548,6 @@ if __name__ == '__main__':
     # Load in MODTRAN Output
     baseline_acd = modtran_tools.load_acd(filename[0]+'.acd')
 
-    # t_Ts = t_Tso/t_T
-    # t_Ts(np.isnan(t_Ts)) = 0
-    # t_Ts(np.isinf(t_Ts)) = 0
-    # T = super_resample(t_T,wvl,neon_wvl,neon_fwhm)
-    # t = super_resample(t_t,wvl,neon_wvl,neon_fwhm)
-    # Ts = super_resample(t_Ts,wvl,neon_wvl,neon_fwhm)
-    # ts = super_resample(t_ts,wvl,neon_wvl,neon_fwhm)
-    # Tso = super_resample(t_Tso,wvl,neon_wvl,neon_fwhm)
-    # sph_alb = super_resample(t_sph_alb,wvl,neon_wvl,neon_fwhm)
-
     # Load MODTRAN Irradiance
     baseline_flx = modtran_tools.load_flx(filename[0]+'.flx')
     flight_ind = 10; # Index of flight altitude (nominally 2.7 km on 6/8 and 6/17)
@@ -635,28 +579,6 @@ if __name__ == '__main__':
     path_reflectances = dict([('wvl',wvl_7sc),('rad_path_refl',rho_a_R),('irrad_path_refl',rho_a_I)])
 
     flight_acd = modtran_tools.load_acd(filename[1] + '.acd')
-    # t_Ts_1km = t_Tso_1km/t_T_1km
-    # t_Ts_1km[np.isnan(t_Ts_1km)] = 0
-    # t_Ts_1km[np.isinf(t_Ts_1km)] = 0
-    # T_1km = super_resample(t_T_1km,wvl,neon_wvl,neon_fwhm)
-    # t_1km = super_resample(t_t_1km,wvl,neon_wvl,neon_fwhm)
-    # Ts_1km = super_resample(t_Ts_1km,wvl,neon_wvl,neon_fwhm)
-    # ts_1km = super_resample(t_ts_1km,wvl,neon_wvl,neon_fwhm)
-    # Tso_1km = super_resample(t_Tso_1km,wvl,neon_wvl,neon_fwhm)
-    # sph_alb_1km = super_resample(t_sph_alb_1km,wvl,neon_wvl,neon_fwhm)
-
-    # flight_flx = modtran_tools.load_flx(filename[1]+'.flx')
-    # t_T_derived_1km = flx_data_1km.data[:,4]/flx_data_1km.data[:,34]
-    # t_Ts_derived_1km = flx_data_1km.data[:,4]/flx_data_1km.data[:,-1]
-    # t_T_derived = flx_data.data[:,4]/flx_data.data[:,34]
-    # t_Ts_derived = flx_data.data[:,4]/flx_data.data[:,-1]
-    #
-    # T_derived_1km = super_resample(flx_data_1km.data[:,4]/flx_data_1km.data[:,34],flx_data_1km.data[:,1],neon_wvl,neon_fwhm)
-    # Ts_derived_1km = super_resample(flx_data_1km.data[:,4]/flx_data_1km.data[:,-1],flx_data_1km.data[:,1],neon_wvl,neon_fwhm)
-    # T_derived = super_resample(flx_data.data[:,4]/flx_data.data[:,34],flx_data.data[:,1],neon_wvl,neon_fwhm)
-    # Ts_derived = super_resample(flx_data.data[:,4]/flx_data.data[:,end],flx_data.data[:,1],neon_wvl,neon_fwhm)
-    #
-    # flight_7sc = modtran_tools.load_7sc
 
     # Load SSIR Data
     ssim = sio.loadmat(SSIRfile)
@@ -774,7 +696,8 @@ if __name__ == '__main__':
 
     # rad0 = super_resample(r0,wvl_7sc,neon_wvl,neon_fwhm)
     # Ifup0 = super_resample(rho_a_I*Ifdn_obs_trim_NIS_SSIM,flx_wvl,neon_wvl2[:,x],neon_fwhm)*Ifdn_obs_trim
-
+    rmse_vals = dict()
+    
     for target in target_list:
         print(target['name'])
         
@@ -838,7 +761,7 @@ if __name__ == '__main__':
         asd_neon = dict([('spectra',super_resample(target['ref'],asd_wvl,neon_wvl,neon_fwhm)/100),('wvl',asd_wvl),('color',asd_color),('name','ASD-GroundTruth')])
 
         plot_results(asd,R_albedo,R_stand, R_stand_adj, R_enhan, R_enhan_adj, title = target['fname'], yrng = target['range'], save = True)
-        calc_rmse(asd_neon, neon_wvl, R_albedo, R_stand, R_stand_adj, R_enhan, R_enhan_adj)
+        rmse_vals[target['name']] = calc_rmse(asd_neon, neon_wvl, R_albedo, R_stand, R_stand_adj, R_enhan, R_enhan_adj)
 
     plt.figure()
     plt.plot(neon_wvl0,super_resample(baseline_flx['downwelling'][flight_ind]/mu,baseline_flx['wvl'],neon_wvl0,neon_fwhm0)*10000,'r')
@@ -848,86 +771,13 @@ if __name__ == '__main__':
     obs_Ifdn = ssim['zspect'][ssirtime_ind,:]
 
     sio.savemat(date.format('%s')+'_downirradcomp.mat',{'model_Ifdn':model_Ifdn,'obs_Ifdn':obs_Ifdn,'neon_wvl0':neon_wvl0,'zwvl':zwvl})
-
-
-
-    # Full Resolution Calculation
-#    Tsts_Tt = super_resample((t_Ts + t_ts)*(t_T+t_t),wvl,neon_wvl,neon_fwhm)
-#    Tt2 = super_resample((t_T_1km + t_t_1km)**2,wvl,neon_wvl,neon_fwhm)
-#    t2Tso2 = super_resample(t_t_1km**2 + 2 * t_t_1km * sqrt(t_Tso_1km) + t_Tso_1km,wvl,neon_wvl,neon_fwhm)
-#    tTt = super_resample((t_t_1km + t_T_1km) * t_t_1km,wvl,neon_wvl,neon_fwhm)
-#    tTT = super_resample((t_t_1km + t_T_1km) * t_T_1km,wvl,neon_wvl,neon_fwhm)
-#    tTso2 = super_resample((t_t_1km + sqrt(t_Tso_1km))**2,wvl,neon_wvl,neon_fwhm)
-#
-#    tTsot = super_resample((t_t_1km + sqrt(t_Tso_1km)) * t_t_1km,wvl,neon_wvl,neon_fwhm)
-#    tTsoTso = super_resample((t_t_1km + sqrt(t_Tso_1km)) * sqrt(t_Tso_1km),wvl,neon_wvl,neon_fwhm)
-
-
-
-    ## Retrieve Surface Reflectance
-    ##### 3# Tarp #############################################################
-    # Match NIS & SSIR Time
-#    obs_time = np.reshape(nistime(tarp3_coord(2,1):tarp3_coord(2,2),tarp3_coord(1,1):tarp3_coord(1,2)),1,[])
-#    n = np.size(obs_time)
-#
-#    for j = 1:n:
-#        # Extract Pixel/Observation Radiance Spectrum
-#        Rob = tarp3_spc(j,1:152).T
-#        rad0 = super_resample(r0,wvl_7sc,neon_wvl,neon_fwhm)
-#        # TOA Retrieval
-#        tarp3_ret_TOA[j,:] = pi*(Rob-rad0)/(sph_alb*pi*(Rob-rad0)+mu*I0*((Ts + ts)*(T + t)))
-#        tarp3_ret_TOA_B[j,:] = pi*(Rob-rad0)/(sph_alb*pi*(Rob-rad0)+mu*I0*Tsts_Tt)
-#
-#        # Observation Retrieval
-#        [~,ssirtime_ind] = np.min(np.abs(ssirtime-obs_time[j]))
-#
-#        Ifdn_obs_trim = super_resample(zspect(ssirtime_ind,:)',zwvl,neon_wvl,neon_fwhm)
-#        Ifup_obs_trim = super_resample(nspect(ssirtime_ind,:)',nwvl,neon_wvl,neon_fwhm)
-#
-#        Ifup0 = super_resample(rho_a_I,flx_wvl,neon_wvl,neon_fwhm)*Ifdn_obs_trim
-#        rad0 = super_resample(rho_a_R,flx_wvl,neon_wvl,neon_fwhm)*Ifdn_obs_trim
-#
-#        tarp3_ret_noadj(j,:) = pi * (Rob - rad0) / (sph_alb_1km * pi * ...
-#            (Rob - rad0) + Ifdn_obs_trim * (t_1km**2 + 2 * t_1km * sqrt(Tso_1km) + Tso_1km))
-#
-#        rho_bar_ret = (Ifup_obs_trim - Ifup0) / ((Ifdn_obs_trim * ...
-#            ((t_1km + sqrt(Tso_1km))**2) + (Ifup_obs_trim - Ifup0) * sph_alb_1km))
-#        tarp3_ret(j,:) = (Rob - rad0 - (Ifdn_obs_trim * (t_1km + sqrt(Tso_1km)) * t_1km) / ...
-#            pi * (rho_bar_ret / (1 - rho_bar_ret * sph_alb_1km))) * ...
-#            (pi / (Ifdn_obs_trim * (t_1km + sqrt(Tso_1km)) * sqrt(Tso_1km))) * (1 - rho_bar_ret * sph_alb_1km)
-#
-#        flight_alb(j,:) = Rob*pi/Ifdn_obs_trim
-#
-#    plt.figure
-#    # plot(neon_wvl,tarp3_ret_TOA,'Color',light_standard)
-#    # plot(neon_wvl,tarp3_ret_noadj,'Color',light_intermediate) # Intermediate
-#    # plot(neon_wvl,tarp3_ret,'Color',light_enhanced)
-#    plt.plot(asd_wvl,mean(tarp03,1)'/100,'k','LineWidth',1.5)
-#    # plot(neon_wvl,mean(tarp3_ret_TOA,1),'Color',standard,'LineWidth',1.5)
-#    plt.plot(neon_wvl,mean(flight_alb,1),'Color',[153,163,164]/255,'LineWidth',1.5)
-#    plt.plot(neon_wvl,mean(tarp3_ret_TOA_B,1),'-','Color',standard,'LineWidth',1.5)
-#    plt.plot(neon_wvl,mean(tarp3_ret_noadj,1),'Color',intermediate,'LineWidth',1.5) # Intermediate
-#    plt.plot(neon_wvl,mean(tarp3_ret,1),'Color',enhanced,'LineWidth',1.5)
-#    plt.ylabel('Reflectance','FontSize',12)
-#    plt.xlabel('Wavelength [nm]','FontSize',12)
-#    plt.axis([350,1025,0,0.1])
-#    plt.set(gca,'FontSize',12,'XColor','k','YColor','k')
-#    fig = plt.gcf;
-#    plt.set(fig,'PaperUnits','inches','PaperPosition',[0 0 4 4]);
-#    plt.savefig(fig,'-depsc','-r300','TestTarp3Retrieval.eps')
-#
-#    wv_bands = xor(neon_wvl < 928, neon_wvl > 989);
-#    wv_bands = xor(wv_bands,neon_wvl > 1095);
-#
-#    tarp03_r = super_resample(mean(tarp03,1),asd_wvl,neon_wvl,neon_fwhm)'/100;
-#
-#    plt.figure;hold on;plot(neon_wvl,(mean(tarp3_ret,1)-tarp03_r)*100,'Color',enhanced)
-#    plt.plot(neon_wvl,(mean(tarp3_ret_noadj,1)-tarp03_r)*100,'Color',intermediate)
-#    plt.plot(neon_wvl,(mean(tarp3_ret_TOA_B,1)-tarp03_r)*100,'Color',standard);grid on;
-#    RMSE_tarp3 = [sqrt(sum(((mean(tarp3_ret,1)-tarp03_r)*100)**2)/numel(tarp03_r));
-#        sqrt(sum(((mean(tarp3_ret_noadj,1)-tarp03_r)*100)**2)/numel(tarp03_r));
-#        sqrt(sum(((mean(tarp3_ret_TOA_B,1)-tarp03_r)*100)**2)/numel(tarp03_r))];
-#    RMSE_tarp3_no_wv = [sqrt(sum(((mean(tarp3_ret(:,wv_bands),1)-tarp03_r(wv_bands))*100)**2)/numel(tarp03_r(wv_bands)));
-#        sqrt(sum(((mean(tarp3_ret_noadj(:,wv_bands),1)-tarp03_r(wv_bands))*100)**2)/numel(tarp03_r(wv_bands)));
-#        sqrt(sum(((mean(tarp3_ret_TOA_B(:,wv_bands),1)-tarp03_r(wv_bands))*100)**2)/numel(tarp03_r(wv_bands)))];
-#    plt.title('Tarp 3#')
+    
+    
+    keys = tuple(rmse_vals[target['name']].keys())
+    fid = open('RMSE_Output.txt','w')
+    fid.write('atmo_corr.py RMSE Outputs\nTarget\t{0[0]!s}\t{0[1]!s}\t{0[2]!s}\t{0[3]!s}\t{0[4]!s}\n'.format(keys))
+    
+    for line in rmse_vals:
+        fid.write('{0!s}\t{1[0]:f}\t{1[1]:f}\t{1[2]:f}\t{1[3]:f}\t{1[4]:f}\n'.format(line,list(rmse_vals[line].values())))
+        
+    fid.close()
