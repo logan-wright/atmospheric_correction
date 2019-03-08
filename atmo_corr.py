@@ -89,11 +89,11 @@ def irrad_correction(obs,L0,If_dn,trans,mu = None):
     n_spectra =obs['spectra'].shape
     n_wvl = obs['resp_func']['wvl'].shape
     R = np.zeros((n_spectra[0],n_wvl[0]))
-    
+
     # CHECK IF Number of Spectra == Number of irradiance
     if obs['spectra'].shape[0] != If_dn.shape[0]:
         print('WARNING: Non-matching number of irradiance spectra')
-        
+
     if mu is not None:
         for n in range(n_spectra[0]):
             # NEEDS TO BE ADJUSTED
@@ -161,12 +161,12 @@ def adjacency_correction(obs,Idn,Iup,L0,Iup0,trans,mu = None, type = 'Standard')
 #
 #        transmittance1 = super_resample((trans['ts'] + trans['Ts']) * trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
 #        transmittance2 = super_resample((trans['ts'] + trans['Ts']) * trans['T'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
-        
+
 #        # Mirror Matlab Setup
         t_t = super_resample(trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         t_Tso = super_resample(trans['Tso'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         transmittance = t_t**2 + 2*t_t*np.sqrt(t_Tso) + t_Tso
-        
+
         transmittance1 = super_resample((trans['ts'] + trans['Ts']) * trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         transmittance2 = super_resample((trans['ts'] + trans['Ts']) * trans['T'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
 
@@ -180,15 +180,15 @@ def adjacency_correction(obs,Idn,Iup,L0,Iup0,trans,mu = None, type = 'Standard')
         # Correct Transmittance Calculations
 #        transmittance = super_resample(trans['ts'] + trans['Ts'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         spherical_albedo = super_resample(trans['sph'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
-#        
+#
 #        transmittance1 = super_resample((trans['ts'] + trans['Ts']) * trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
 #        transmittance2 = super_resample((trans['ts'] + trans['Ts']) * trans['T'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
-        
+
         # Mirror Matlab Setup
         t_t = super_resample(trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         t_Tso = super_resample(trans['Tso'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         transmittance = (t_t + np.sqrt(t_Tso))**2
-        
+
         transmittance1 = (t_t + np.sqrt(t_Tso))*t_t
         transmittance2 = (t_t + np.sqrt(t_Tso))*np.sqrt(t_Tso)
 
@@ -263,17 +263,12 @@ def plot_results(*args, title = 'Reflectances', yrng = (0,1), save = False):
     '''
 
     fig1 = plt.figure(figsize = (4,4))
-#    plt.title(title)
     ax1 = plt.subplot()
     plt.xlabel('Wavelength [nm]',fontsize = 12)
     plt.ylabel('Reflectance',fontsize = 12)
     ax1.axis([350,1025,0,0.1])
-
-#    fig2 = plt.figure(figsize = (4,4))
-#    ax2 = plt.subplot()
-#    ax2.xlabel('Wavelength [nm]','FontSize',12)
-#    ax2.axis([350,1025,0,0.1])
-
+    ax1.set_xticks([400,600,800,1000])
+    plt.tight_layout(pad=2.0)
 
     for arg in args:
         if np.size(arg['spectra'].shape) == 2:
@@ -283,16 +278,10 @@ def plot_results(*args, title = 'Reflectances', yrng = (0,1), save = False):
         ax1.plot(arg['wvl'],mean_spec,color = arg['color'],LineWidth = 1.5)
         plt.ylim(yrng)
 
-
-
     if save == True:
         for item in ([ax1.title, ax1.xaxis.label, ax1.yaxis.label] + ax1.get_xticklabels() + ax1.get_yticklabels()):
             item.set_fontsize(20)
         fig1.savefig( title + '.eps',dpi = 300, format = 'eps')
-
-#        for item in ([ax2.title, ax2.xaxis.label, ax2.yaxis.label] + ax2.get_xticklabels() + ax2.get_yticklabels()):
-#            item.set_fontsize(20)
-#        fig2.savefig(NAME + '.eps',dpi = 300, format = 'eps')
 
 def calc_rmse(baseline, wvl, *args):
     '''
@@ -320,7 +309,7 @@ def calc_rmse(baseline, wvl, *args):
 #        RMSE_nowv = np.sqrt(np.sum(((np.mean(arg['spectra'][:,wv_bands], axis = 0) - baseline['spectra'][wv_bands])*100)**2)/len(baseline['spectra'][wv_bands]))
 
         out[arg['name']] = RMSE
-        
+
     return out
 
 def sampling_issue(I0_orig,SunEllipticFactor,zwvl,ssim_zfwhm,neon_wvl,neon_fwhm,t_Ts,t_ts):
@@ -512,7 +501,7 @@ if __name__ == '__main__':
     # Modify NEON Instrument Response Function
     neon_wvl0 = nis_datacube.resp_func['wvl'] + 1.28     # Add Empirically Determined Offset
     neon_fwhm0 = nis_datacube.resp_func['fwhm']
-    
+
     # Load NEON Instrument Response Function # Try Other Response Function
     respfunc = np.genfromtxt('../ATMO_CORR_Code/nis2013_fmed2_2013.dat')
     neon_wvl0 = respfunc[:,1]+1.28
@@ -555,7 +544,7 @@ if __name__ == '__main__':
     # flx_fup = conv*super_resample(flx_data.data(:,8),flx_data.data(:,1),neon_wvl,neon_fwhm)
     # flx_fdn = flx_data.data[:,33]+flx_data.data[:,34]
     # flx_fup = flx_data.data[:,32]
-    Iup0 = baseline_flx['upwelling'][flight_ind]*10000 # factor of 10,000 to convert from W*cm-2*nm-1 to W*m-2*nm-1
+    Iup0 = np.flip(baseline_flx['upwelling'][flight_ind])*10000 # factor of 10,000 to convert from W*cm-2*nm-1 to W*m-2*nm-1
 
     # Load MODTRAN Radiance
     baseline_7sc = modtran_tools.load_7sc(filename[0]+'.7sc')
@@ -676,7 +665,7 @@ if __name__ == '__main__':
     standard_adj = [152/255,78/255,163/255] # Purple
 
     albedo_color = [153/255,163/255,164/255]    # Gray
-    asd_color = 'k'
+    asd_color = [0,0,0]
 
     target_list = [dict([('name','3% Tarp'),('coord',tarp3_coord),
                          ('fname',date+'_tarp03'),('ref',np.mean(asdtemp['tarp03'],axis = 0)),
@@ -697,37 +686,37 @@ if __name__ == '__main__':
     # rad0 = super_resample(r0,wvl_7sc,neon_wvl,neon_fwhm)
     # Ifup0 = super_resample(rho_a_I*Ifdn_obs_trim_NIS_SSIM,flx_wvl,neon_wvl2[:,x],neon_fwhm)*Ifdn_obs_trim
     rmse_vals = dict()
-    
+
     for target in target_list:
         print(target['name'])
-        
+
         target['spectra'] = np.reshape(nis_datacube.data_cube[target['coord'][1,0]:target['coord'][1,1],target['coord'][0,0]:target['coord'][0,1],:],(-1,426))
         target['resp_func'] = dict([('wvl',neon_wvl),('fwhm',neon_fwhm),('wvl0',neon_wvl0)])
-        
+
         # Time Dependent Solver
         obstime =  nistime[target['coord'][1,0]:target['coord'][1,1],target['coord'][0,0]:target['coord'][0,1]].flatten()
         temp_Ifdn = list()
         temp_Ifup = list()
-        
+
         Iup = np.zeros((target['spectra'].shape[0],target['resp_func']['wvl'].shape[0]))
         Idn = np.zeros((target['spectra'].shape[0],target['resp_func']['wvl'].shape[0]))
-        
+
         for i in range(len(obstime)):
 #            obs_time = np.mean(nistime[target['coord'][1,0]:target['coord'][1,1],target['coord'][0,0]:target['coord'][0,1]])
             ssirtime_ind = np.argmin(np.abs(ssim['ssirtime']-obstime[i]))
             temp_Ifdn.append(ssim['zspect'][ssirtime_ind,:])
             temp_Ifup.append(ssim['nspect'][ssirtime_ind,:])
-            
+
             # For R_stand_adj:
             Iup[i,:] = super_resample(ssim['nspect'][ssirtime_ind,:],nwvl,target['resp_func']['wvl'], target['resp_func']['fwhm'])
-            
+
             # For R_enhan:
             Idn[i,:] = super_resample(ssim['zspect'][ssirtime_ind,:],zwvl,target['resp_func']['wvl'], target['resp_func']['fwhm'])
-                    
+
 #        Ifdn_obs = dict([('wvl',ssim['zwvl']),('If_dn',np.array(temp_Ifdn))])
 #        Ifup_obs = dict([('wvl',ssim['nwvl']),('If_up',np.array(temp_Ifup))])
 
-            
+
 #        # Note - I should rewrite to find the closest SSIR observation to each pixel's time, not the mean time
 #        obs_time = np.mean(nistime[target['coord'][1,0]:target['coord'][1,1],target['coord'][0,0]:target['coord'][0,1]])
 #        ssirtime_ind = np.argmin(np.abs(ssim['ssirtime']-obs_time))
@@ -757,7 +746,7 @@ if __name__ == '__main__':
         R_albedo = albedo(target,Idn)
         R_albedo = dict([('spectra',R_albedo),('wvl',neon_wvl),('color',albedo_color),('name','Flight Level Albedo')])
 
-        asd = dict([('spectra',target['ref']),('wvl',asd_wvl),('color',asd_color),('name','ASD-GroundTruth')])
+        asd = dict([('spectra',target['ref']/100),('wvl',asd_wvl),('color',asd_color),('name','ASD-GroundTruth')])
         asd_neon = dict([('spectra',super_resample(target['ref'],asd_wvl,neon_wvl,neon_fwhm)/100),('wvl',asd_wvl),('color',asd_color),('name','ASD-GroundTruth')])
 
         plot_results(asd,R_albedo,R_stand, R_stand_adj, R_enhan, R_enhan_adj, title = target['fname'], yrng = target['range'], save = True)
@@ -771,13 +760,13 @@ if __name__ == '__main__':
     obs_Ifdn = ssim['zspect'][ssirtime_ind,:]
 
     sio.savemat(date.format('%s')+'_downirradcomp.mat',{'model_Ifdn':model_Ifdn,'obs_Ifdn':obs_Ifdn,'neon_wvl0':neon_wvl0,'zwvl':zwvl})
-    
-    
+
+
     keys = tuple(rmse_vals[target['name']].keys())
     fid = open('RMSE_Output.txt','w')
     fid.write('atmo_corr.py RMSE Outputs\nTarget\t{0[0]!s}\t{0[1]!s}\t{0[2]!s}\t{0[3]!s}\t{0[4]!s}\n'.format(keys))
-    
+
     for line in rmse_vals:
         fid.write('{0!s}\t{1[0]:f}\t{1[1]:f}\t{1[2]:f}\t{1[3]:f}\t{1[4]:f}\n'.format(line,list(rmse_vals[line].values())))
-        
+
     fid.close()

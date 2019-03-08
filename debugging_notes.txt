@@ -21,7 +21,7 @@ Checked Possibilities:
 - (FIXED) Time Matching Need to do time matching in solving function?
     -- Added time matching function, it made very little difference
 
-- Problem:
+- (FIXED) Problem:
     Now Standard RMSE values match, still difference in Enhanced, and Enhanced
     with Adjacency need to compare spectra
 
@@ -37,12 +37,15 @@ Checked Possibilities:
 
     -- (RESOLVED) Discrepancy was caused by order of resampling.
 
-    -- IN PROGRESS:
-        Solve same issue for adjacency_correction,
-        -- (FIXED) rho_a_I was reversed (was long to short), reset to normal wavelength order (short ~350nm to long ~2500nm)
-        -- Still not exact matching
-        -- Need to Check if adjacency_correction( type == standard) is fixed to match the irradiance version of the function
-Still difference in rho_a_R
+    Solve same issue for adjacency_correction,
+    -- (FIXED) rho_a_I was reversed (was long to short), reset to normal wavelength order (short ~350nm to long ~2500nm)
+    -- Still not exact matching
+
+    - (LAST NOTE) Remaining difference appears to be on order of machine precision
+
+-- IN PROGRESS:
+    -- For Standard with Adjacency, results don't appear correctly.
+      - May be due to difference in transmittance?
 
 FOUND ERRORS
 - was resampling to neon_wvl instead of just truncating to the correct indices,
