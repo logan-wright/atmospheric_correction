@@ -74,19 +74,19 @@ def load_acd(filepath):
     rawdata = np.loadtxt(filepath,skiprows = 5)
     # Creates a dictionary containing each of the numpy arrays corresponding
     #   to each term in the file
-    ret_dict = dict([('freq',rawdata[:,0]),
-                     ('wvl',1e7/rawdata[:,0]),   # Converts Frequency (cm-1) to wavelength [nm]
-                     ('los',rawdata[:,1]),
-                     ('kint',rawdata[:,2]),
-                     ('kweight',rawdata[:,3]),
-                     ('ts',rawdata[:,4]),
-                     ('Tso', rawdata[:,5]),
-                     ('t', rawdata[:,6]),
-                     ('T', rawdata[:,7]),
-                     ('sph', rawdata[:,8])])
+    ret_dict = dict([('freq',rawdata[:,0]),     # Frequency (cm-1)
+                     ('wvl',1e7/rawdata[:,0]),  # Converts Frequency (cm-1) to wavelength [nm]
+                     ('los',rawdata[:,1]),      # ?
+                     ('kint',rawdata[:,2]),     # ?
+                     ('kweight',rawdata[:,3]),  # ?
+                     ('ts',rawdata[:,4]),       # Sun to Ground Diffuse Transmittance
+                     ('Tso', rawdata[:,5]),     # Sun to Ground to Observer Direct Transmittance
+                     ('t', rawdata[:,6]),       # Observer to Ground Embedded Diffuse Transmittance
+                     ('T', rawdata[:,7]),       # Observer to Ground Direct Transmittance
+                     ('sph', rawdata[:,8])])    # Spherical Albedo from Ground
 
     # Derive Ts and resolve any divide by 0, or NaN ambiguities
-    ret_dict['Ts'] = ret_dict['Tso']/ret_dict['T']
+    ret_dict['Ts'] = ret_dict['Tso']/ret_dict['T'] # Sun to Ground Direct Transmittance
     ret_dict['Ts'][np.isnan(ret_dict['Ts'])] = 0
     ret_dict['Ts'][np.isinf(ret_dict['Ts'])] = 0
 

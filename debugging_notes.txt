@@ -43,9 +43,11 @@ Checked Possibilities:
 
     - (LAST NOTE) Remaining difference appears to be on order of machine precision
 
+- (FIXED) For Standard with Adjacency, results don't appear correctly.
+      - May be due to difference in transmittance? - This was correct, issue was lack of mu term in transmittance.
+
 -- IN PROGRESS:
-    -- For Standard with Adjacency, results don't appear correctly.
-      - May be due to difference in transmittance?
+
 
 FOUND ERRORS
 - was resampling to neon_wvl instead of just truncating to the correct indices,

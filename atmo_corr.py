@@ -165,7 +165,8 @@ def adjacency_correction(obs,Idn,Iup,L0,Iup0,trans,mu = None, type = 'Standard')
 #        # Mirror Matlab Setup
         t_t = super_resample(trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         t_Tso = super_resample(trans['Tso'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
-        transmittance = t_t**2 + 2*t_t*np.sqrt(t_Tso) + t_Tso
+        # transmittance = t_t**2 + 2*t_t*np.sqrt(t_Tso) + t_Tso
+        transmittance = super_resample((trans['Ts'] + trans['ts']) * (trans['T'] + trans['t']),trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
 
         transmittance1 = super_resample((trans['ts'] + trans['Ts']) * trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         transmittance2 = super_resample((trans['ts'] + trans['Ts']) * trans['T'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
@@ -174,7 +175,7 @@ def adjacency_correction(obs,Idn,Iup,L0,Iup0,trans,mu = None, type = 'Standard')
 #            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
            spectrum = obs['spectra'][n,0:152]
            Rh_bar = (Iup[n,:] - Iup0) / ((mu * Idn * transmittance) + (Iup[n,:] - Iup0) * spherical_albedo)
-           R[n,:] = (spectrum - L0 - ((Idn * transmittance1) / np.pi) * (Rh_bar / (1 - Rh_bar * spherical_albedo))) * ((np.pi * (1 - Rh_bar * spherical_albedo)) / (Idn * transmittance2))
+           R[n,:] = (spectrum - L0 - ((mu * Idn * transmittance1) / np.pi) * (Rh_bar / (1 - Rh_bar * spherical_albedo))) * ((np.pi * (1 - Rh_bar * spherical_albedo)) / (mu * Idn * transmittance2))
 
     elif type == 'Irradiance':
         # Correct Transmittance Calculations
@@ -544,7 +545,7 @@ if __name__ == '__main__':
     # flx_fup = conv*super_resample(flx_data.data(:,8),flx_data.data(:,1),neon_wvl,neon_fwhm)
     # flx_fdn = flx_data.data[:,33]+flx_data.data[:,34]
     # flx_fup = flx_data.data[:,32]
-    Iup0 = np.flip(baseline_flx['upwelling'][flight_ind])*10000 # factor of 10,000 to convert from W*cm-2*nm-1 to W*m-2*nm-1
+    Iup0 = np.flip(baseline_flx['upwelling'][flight_ind], axis = 0)*10000 # factor of 10,000 to convert from W*cm-2*nm-1 to W*m-2*nm-1
 
     # Load MODTRAN Radiance
     baseline_7sc = modtran_tools.load_7sc(filename[0]+'.7sc')
@@ -559,7 +560,7 @@ if __name__ == '__main__':
 
     # Calculate Atmospheric Reflectance
 
-    rho_a_I = np.flip(baseline_flx['upwelling'][flight_ind]/(baseline_flx['downwelling'][flight_ind]))
+    rho_a_I = np.flip(baseline_flx['upwelling'][flight_ind]/(baseline_flx['downwelling'][flight_ind]), axis = 0)
     rho_a_R = r0/(1e4*np.flipud(baseline_flx['downwelling'][flight_ind]))
 
     rad0_neon = super_resample(r0,wvl_7sc,neon_wvl,neon_fwhm)
