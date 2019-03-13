@@ -61,9 +61,6 @@ def load_flx(filepath):
 
 def load_7sc(filepath):
     data = np.genfromtxt(filepath,dtype = float, skip_header = 11, skip_footer = 1)
-    # wvl_7sc = data_7sc.data[:,0]
-    # r0 = data_7sc.data[:,9]
-    # Iup = data_7sc.data[:,10]
     ret_dict = dict([('wvl',data[:,0]),
                      ('path_radiance',data[:,8]),
                      ('path_irradiance',data[:,9])])

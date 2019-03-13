@@ -19,8 +19,25 @@ Description of the atmospheric correction methods can be found in:
 
 
 DESCRIPTION:
+This top level script is used to atmospherically correct radiance imagery
+collected by the NEON Imaging Spectrometer. Included are methods making use of
+data from the on-board Solar Spectral Irradiance Monitor (SSIM or SSIR). This
+package contains several atmospheric correction methods:
 
+    standard_correction() - performs a standard correction using only MODTRAN
+                            model output and NIS data
+    irrad_correction() - corrects the NIS data using MODTRAN modelled
+                         atmospheric transmittances and downwelling irradiance
+                         data collected by the SSIM/SSIR
+    adjacency_correction() - performs atmospheric correction using NIS imagery,
+                             SSIM data, and MODTRAN model. In addition to the
+                             downwelling irradiance observations this function
+                             uses upwelling irradiance observations for
+                             adjacency effect correction.
 
+These codes require having NIS imagery; MODTRAN model output including .acd,
+.flx, and .7sc files; SSIM data of up- and down-welling irradiance; and ASD
+field spectrometer data for reference.
 
 '''
 import numpy as np
@@ -46,7 +63,6 @@ def standard_correction(obs,L0,I0,trans,mu):
     Outputs:
 
     '''
-
     transmittance = super_resample((trans['Ts'] + trans['ts']) * (trans['T'] + trans['t']),trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
     spherical_albedo = super_resample(trans['sph'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
 
@@ -55,7 +71,6 @@ def standard_correction(obs,L0,I0,trans,mu):
     R = np.zeros((n_spectra[0],n_wvl[0]))
 
     for n in range(n_spectra[0]):
-#        spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
         spectrum = obs['spectra'][n,0:152]
         R[n,:] = np.pi * (spectrum - L0) / (spherical_albedo * np.pi * (spectrum - L0) + mu * I0 * ( transmittance ) )
 
@@ -75,10 +90,8 @@ def irrad_correction(obs,L0,If_dn,trans,mu = None):
     Outputs:
 
     '''
-
-    # This transmittance calculation is more correct!
-    transmittance = super_resample((trans['Ts'] + trans['ts']) * (trans['T'] + trans['t']),trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
-
+    # This transmittance calculation is more correct, but using heritage calculation below to match matlab
+    # transmittance = super_resample((trans['Ts'] + trans['ts']) * (trans['T'] + trans['t']),trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
     # Mirror Matlab Setup
     t_t = super_resample(trans['t'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
     t_Tso = super_resample(trans['Tso'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
@@ -97,12 +110,10 @@ def irrad_correction(obs,L0,If_dn,trans,mu = None):
     if mu is not None:
         for n in range(n_spectra[0]):
             # NEEDS TO BE ADJUSTED
-#            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
             spectrum = obs['spectra'][n,0:152]
             R[n,:] = np.pi * (spectrum - L0[n,:]) / (spherical_albedo * np.pi * (spectrum - L0[n,:]) + If_dn[n,:] * ( transmittance ) )
     else:
         for n in range(n_spectra[0]):
-#            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
             spectrum = obs['spectra'][n,0:152]
             R[n,:] = np.pi * (spectrum - L0[n,:]) / (spherical_albedo * np.pi * (spectrum - L0[n,:]) + If_dn[n,:] * ( transmittance ) )
 
@@ -127,7 +138,6 @@ def albedo(obs,Idn):
     A = np.zeros((n_spectra[0],n_wvl[0]))
 
     for n in range(n_spectra[0]):
-#        spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'],obs['resp_func']['wvl'],obs['resp_func']['fwhm'])
         spectrum = obs['spectra'][n,0:152]
         A[n,:] = spectrum * np.pi / Idn[n,:]
 
@@ -172,7 +182,6 @@ def adjacency_correction(obs,Idn,Iup,L0,Iup0,trans,mu = None, type = 'Standard')
         transmittance2 = super_resample((trans['ts'] + trans['Ts']) * trans['T'],trans['wvl'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
 
         for n in range(n_spectra[0]):
-#            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
            spectrum = obs['spectra'][n,0:152]
            Rh_bar = (Iup[n,:] - Iup0) / ((mu * Idn * transmittance) + (Iup[n,:] - Iup0) * spherical_albedo)
            R[n,:] = (spectrum - L0 - ((mu * Idn * transmittance1) / np.pi) * (Rh_bar / (1 - Rh_bar * spherical_albedo))) * ((np.pi * (1 - Rh_bar * spherical_albedo)) / (mu * Idn * transmittance2))
@@ -194,9 +203,6 @@ def adjacency_correction(obs,Idn,Iup,L0,Iup0,trans,mu = None, type = 'Standard')
         transmittance2 = (t_t + np.sqrt(t_Tso))*np.sqrt(t_Tso)
 
         for n in range(n_spectra[0]):
-#            spectrum = super_resample(obs['spectra'][n,:],obs['resp_func']['wvl0'], obs['resp_func']['wvl'], obs['resp_func']['fwhm'])
-#            R[n,:] = np.pi * (spectrum - L0) / (spherical_albedo * np.pi * (spectrum - L0) + Idn * ( transmittance ) )
-
             spectrum = obs['spectra'][n,0:152]
             Rh_bar = (Iup[n,:] - Iup0[n,:]) / ((Idn[n,:] * transmittance) + (Iup[n,:] - Iup0[n,:]) * spherical_albedo)
             R[n,:] = (spectrum - L0[n,:] - ((Idn[n,:] * transmittance1) / np.pi) * (Rh_bar / (1 - Rh_bar * spherical_albedo))) * ((np.pi * (1 - Rh_bar * spherical_albedo)) / (Idn[n,:] * transmittance2))
@@ -300,17 +306,13 @@ def calc_rmse(baseline, wvl, *args):
 
     '''
     out = dict()
-
 #    wv_bands = np.logical_xor(wvl < 928, wvl > 989)
 #    wv_bands = np.logical_xor(wv_bands,wvl > 1095)
 #    wv_bands = np.where(wv_bands == True)
-
     for arg in args:
         RMSE = np.sqrt(np.sum(((np.mean(arg['spectra'], axis = 0) - baseline['spectra'])*100)**2)/len(baseline['spectra']))
 #        RMSE_nowv = np.sqrt(np.sum(((np.mean(arg['spectra'][:,wv_bands], axis = 0) - baseline['spectra'][wv_bands])*100)**2)/len(baseline['spectra'][wv_bands]))
-
         out[arg['name']] = RMSE
-
     return out
 
 def sampling_issue(I0_orig,SunEllipticFactor,zwvl,ssim_zfwhm,neon_wvl,neon_fwhm,t_Ts,t_ts):
@@ -404,9 +406,6 @@ def empirical_wvl_fit():
             tarp48_ret_noadj_WVLS2[:,x,y] = pi * (Rob - rad0) / (sph_alb_layer * pi * ...
                 (Rob - rad0) + Ifdn_obs_trim * (t_wvl**2 + 2 * t_wvl * sqrt(Tso_wvl) + Tso_wvl))
 
-
-
-
     dlambda_SSIM_zen = np.arange(-5,3,0.1)
     zwvl2 = np.matlib.repmat(zwvl,1,length(dlambda_SSIM_zen)) + np.matlib.repmat(dlambda_SSIM_zen,439,1)
     for x in range(dlambda_SSIM_zen.size):
@@ -440,7 +439,6 @@ def empirical_wvl_fit():
 
 if __name__ == '__main__':
     # Below Cloud Surface Reflectance Retrieval
-
     # Set Date
     date = '20150608'
 
@@ -491,12 +489,10 @@ if __name__ == '__main__':
         asdfile = os.path.abspath('../ATMO_CORR_Code/20150617_ASD_REFL.mat')
 
     N = len(filename)
-
     conv = 10000   # Scale Factor to convert [W cm^-2 nm^-1] to [W m^-2 nm^-2], used for .flx MODTRAN output file
 
     # Load NIS Data
     nis_datacube = load_nis(NISfile)
-#    metadata = load_nis(NISfile+'_obs_ort')
     nistime = nis_datacube.nav['gps_time']
 
     # Modify NEON Instrument Response Function
@@ -515,24 +511,20 @@ if __name__ == '__main__':
     neon_fwhm_zen = neon_fwhm0[0:364]
     neon_wvl_nad = neon_wvl0[0:152]
     neon_fwhm_nad = neon_fwhm0[0:152]
-    # neon_wvl_nad = neon_wvl0(1:125)
-    #neon_fwhm_nad = neon_fwhm0(1:125)
     # This truncates at 1000 nm (near Si/InGaAs joining)
     neon_wvl = neon_wvl_nad
     neon_fwhm = neon_fwhm_nad
-    # L = len(neon_wvl0)
 
     # Load MODTRAN Irradiance
     data = np.genfromtxt(os.path.abspath('../ATMO_CORR_Code/SUN01med2irradwnNormt.dat'),dtype = float, skip_header = 2)
     data = data[1:50000,:]
-    #     Convert to wavelength increments
+    # Convert to wavelength increments
     data[:,0] = 1e7/data[:,0]
     data[:,1] = data[:,1]*(1/data[:,0]**2)*1e11
     I0 = data[data[:,0]<3000,:]
-
     I0_orig = I0
 
-    #     Convolve to NEON Wavelength
+    # Convolve to NEON Wavelength
     I0 = SunEllipticFactor*super_resample(I0[:,1],I0[:,0],neon_wvl,neon_fwhm)
 
     # Load in MODTRAN Output
@@ -541,25 +533,14 @@ if __name__ == '__main__':
     # Load MODTRAN Irradiance
     baseline_flx = modtran_tools.load_flx(filename[0]+'.flx')
     flight_ind = 10; # Index of flight altitude (nominally 2.7 km on 6/8 and 6/17)
-
-    # flx_fup = conv*super_resample(flx_data.data(:,8),flx_data.data(:,1),neon_wvl,neon_fwhm)
-    # flx_fdn = flx_data.data[:,33]+flx_data.data[:,34]
-    # flx_fup = flx_data.data[:,32]
-    Iup0 = np.flip(baseline_flx['upwelling'][flight_ind], axis = 0)*10000 # factor of 10,000 to convert from W*cm-2*nm-1 to W*m-2*nm-1
+    Iup0 = np.flip(baseline_flx['upwelling'][flight_ind], axis = 0)*conv # factor of 10,000 to convert from W*cm-2*nm-1 to W*m-2*nm-1
 
     # Load MODTRAN Radiance
     baseline_7sc = modtran_tools.load_7sc(filename[0]+'.7sc')
     wvl_7sc = baseline_7sc['wvl']
     r0 = baseline_7sc['path_radiance']/100 # factor of 100 to convert from uW*cm-2*sr-1*nm-1 to W*m2*sr-1*nm-1
-#    Iup0 = baseline_7sc['path_irradiance']/100 # factor of 100 to convert from uW*cm-2*nm-1 to W*m2*nm-1
-
-#    r0 = r0/100
-
-    # r0 = r0[0:,:]/100
-    # Iup = Iup[0,:]
 
     # Calculate Atmospheric Reflectance
-
     rho_a_I = np.flip(baseline_flx['upwelling'][flight_ind]/(baseline_flx['downwelling'][flight_ind]), axis = 0)
     rho_a_R = r0/(1e4*np.flipud(baseline_flx['downwelling'][flight_ind]))
 
@@ -596,10 +577,7 @@ if __name__ == '__main__':
                             (546.07, 8.16),
                             (912.30, 10.75)))
     ssim_nfwhm = np.interp(nwvl,nfwhm0[:,0],nfwhm0[:,1])#'linear','extrap')
-
     ssim['wvl'] = zwvl[24:225]
-
-
 
     # Load Ground Reflectances
     asd_20150617 = sio.loadmat(os.path.abspath('../ATMO_CORR_Code/20150617_ASD_REFL.mat'))
@@ -617,7 +595,6 @@ if __name__ == '__main__':
     veg_asd16 = super_resample(np.mean(asd_20150616['veg'],axis = 0),np.squeeze(asd_20150616['asd_wvl']),neon_wvl,neon_fwhm)/100
     ewroad_asd16 = super_resample(np.mean(asd_20150616['ewroad'],axis = 0),np.squeeze(asd_20150616['asd_wvl']),neon_wvl,neon_fwhm)/100
     nsroad_asd16 = super_resample(np.mean(asd_20150616['nsroad'],axis = 0),np.squeeze(asd_20150616['asd_wvl']),neon_wvl,neon_fwhm)/100
-
 
     asd_20150608 = sio.loadmat(os.path.abspath('../ATMO_CORR_Code/20150608_ASD_REFL.mat'))
     # Average Ground Reflectance Spectra
@@ -662,9 +639,7 @@ if __name__ == '__main__':
     light_intermediate = [235/255,152/255,78/255]   # Light Orange
     standard = [33/255,102/255,172/255] # Blue
     light_standard = [146/255,197/255,222/255]  # Light Blue
-
     standard_adj = [152/255,78/255,163/255] # Purple
-
     albedo_color = [153/255,163/255,164/255]    # Gray
     asd_color = [0,0,0]
 
@@ -683,14 +658,9 @@ if __name__ == '__main__':
                    dict([('name','North-South Road'),('coord',NSroad_coord),
                          ('fname',date+'_nsroad'),('ref',np.mean(asdtemp['nsroad'],axis = 0)),
                          ('range',(0,0.6))])]
-
-    # rad0 = super_resample(r0,wvl_7sc,neon_wvl,neon_fwhm)
-    # Ifup0 = super_resample(rho_a_I*Ifdn_obs_trim_NIS_SSIM,flx_wvl,neon_wvl2[:,x],neon_fwhm)*Ifdn_obs_trim
-    rmse_vals = dict()
-
+    rmse_vals = dict() # Initialize Results Dictionary
     for target in target_list:
         print(target['name'])
-
         target['spectra'] = np.reshape(nis_datacube.data_cube[target['coord'][1,0]:target['coord'][1,1],target['coord'][0,0]:target['coord'][0,1],:],(-1,426))
         target['resp_func'] = dict([('wvl',neon_wvl),('fwhm',neon_fwhm),('wvl0',neon_wvl0)])
 
@@ -698,7 +668,6 @@ if __name__ == '__main__':
         obstime =  nistime[target['coord'][1,0]:target['coord'][1,1],target['coord'][0,0]:target['coord'][0,1]].flatten()
         temp_Ifdn = list()
         temp_Ifup = list()
-
         Iup = np.zeros((target['spectra'].shape[0],target['resp_func']['wvl'].shape[0]))
         Idn = np.zeros((target['spectra'].shape[0],target['resp_func']['wvl'].shape[0]))
 
@@ -754,20 +723,17 @@ if __name__ == '__main__':
         rmse_vals[target['name']] = calc_rmse(asd_neon, neon_wvl, R_albedo, R_stand, R_stand_adj, R_enhan, R_enhan_adj)
 
     plt.figure()
-    plt.plot(neon_wvl0,super_resample(baseline_flx['downwelling'][flight_ind]/mu,baseline_flx['wvl'],neon_wvl0,neon_fwhm0)*10000,'r')
+    plt.plot(neon_wvl0,super_resample(baseline_flx['downwelling'][flight_ind]/mu,baseline_flx['wvl'],neon_wvl0,neon_fwhm0)*conv,'r')
     plt.plot(zwvl,ssim['zspect'][ssirtime_ind,:],'k')
 
-    model_Ifdn = super_resample(baseline_flx['downwelling'][flight_ind]/mu,baseline_flx['wvl'],neon_wvl0,neon_fwhm0)*10000
+    model_Ifdn = super_resample(baseline_flx['downwelling'][flight_ind]/mu,baseline_flx['wvl'],neon_wvl0,neon_fwhm0)*conv
     obs_Ifdn = ssim['zspect'][ssirtime_ind,:]
 
     sio.savemat(date.format('%s')+'_downirradcomp.mat',{'model_Ifdn':model_Ifdn,'obs_Ifdn':obs_Ifdn,'neon_wvl0':neon_wvl0,'zwvl':zwvl})
 
-
     keys = tuple(rmse_vals[target['name']].keys())
     fid = open('RMSE_Output.txt','w')
     fid.write('atmo_corr.py RMSE Outputs\nTarget\t{0[0]!s}\t{0[1]!s}\t{0[2]!s}\t{0[3]!s}\t{0[4]!s}\n'.format(keys))
-
     for line in rmse_vals:
         fid.write('{0!s}\t{1[0]:f}\t{1[1]:f}\t{1[2]:f}\t{1[3]:f}\t{1[4]:f}\n'.format(line,list(rmse_vals[line].values())))
-
     fid.close()
