@@ -287,7 +287,7 @@ def plot_results(*args, title = 'Reflectances', yrng = (0,1), save = False):
 
     if save == True:
         for item in ([ax1.title, ax1.xaxis.label, ax1.yaxis.label] + ax1.get_xticklabels() + ax1.get_yticklabels()):
-            item.set_fontsize(20)
+            item.set_fontsize(12)
         fig1.savefig( title + '.eps',dpi = 300, format = 'eps')
 
 def calc_rmse(baseline, wvl, *args):
@@ -440,7 +440,7 @@ def empirical_wvl_fit():
 if __name__ == '__main__':
     # Below Cloud Surface Reflectance Retrieval
     # Set Date
-    date = '20150608'
+    date = '20150616'
 
     # This section includes filenames and constants for each day/flight line
     if date == '20150608':
@@ -462,7 +462,7 @@ if __name__ == '__main__':
     elif date == '20150616':
         NISfile = os.path.abspath('../ATMO_CORR_Code/NIS01_20150616_151613_rdn')
         tarp3_coord = np.array(((139,145),(231,237)))
-        tarp48_coord = np.array(((149,155)(231,237)))
+        tarp48_coord = np.array(((149,155),(231,237)))
         veg_coord = np.array(((154,160),(252,280)))
         EWroad_coord = np.array(((147,185),(219,224)))
         NSroad_coord = np.array(((167,172),(181,218)))
@@ -487,6 +487,9 @@ if __name__ == '__main__':
         mu = np.cos(np.deg2rad(25.0))                # Determined by Time of Day
         SSIRfile = os.path.abspath('../ATMO_CORR_Code/20150617_SSIR.mat')
         asdfile = os.path.abspath('../ATMO_CORR_Code/20150617_ASD_REFL.mat')
+
+    else:
+        print('ERROR:',date,' is not a valid date. Select 20150608, 20150616, or 20150617')
 
     N = len(filename)
     conv = 10000   # Scale Factor to convert [W cm^-2 nm^-1] to [W m^-2 nm^-2], used for .flx MODTRAN output file
@@ -732,7 +735,7 @@ if __name__ == '__main__':
     sio.savemat(date.format('%s')+'_downirradcomp.mat',{'model_Ifdn':model_Ifdn,'obs_Ifdn':obs_Ifdn,'neon_wvl0':neon_wvl0,'zwvl':zwvl})
 
     keys = tuple(rmse_vals[target['name']].keys())
-    fid = open('RMSE_Output.txt','w')
+    fid = open(date.format('%s') + '_RMSE_Output.txt','w')
     fid.write('atmo_corr.py RMSE Outputs\nTarget\t{0[0]!s}\t{0[1]!s}\t{0[2]!s}\t{0[3]!s}\t{0[4]!s}\n'.format(keys))
     for line in rmse_vals:
         fid.write('{0!s}\t{1[0]:f}\t{1[1]:f}\t{1[2]:f}\t{1[3]:f}\t{1[4]:f}\n'.format(line,list(rmse_vals[line].values())))
